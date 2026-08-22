@@ -24,6 +24,26 @@ cp .env-example .env   # ajustar MONGO_URI/DB_NAME si hace falta
 
 Requiere una instancia de MongoDB corriendo y alcanzable en `MONGO_URI`.
 
+## Docker
+
+```bash
+cd demo-api
+docker build -t demo-api .
+docker run -p 8001:8001 \
+  -e MONGO_URI=mongodb://host.docker.internal:27017 \
+  -e DB_NAME=demo_billing \
+  demo-api
+```
+
+La imagen no trae Mongo adentro ni un `.env` horneado — `MONGO_URI`/`DB_NAME`
+se pasan como variables de entorno al correr el contenedor, igual que corriendo
+`run.sh` directo. Si Mongo corre en el host (no en un contenedor), usa
+`host.docker.internal` como en el ejemplo; si corre en otro contenedor o en un
+servicio externo (Atlas, un Mongo en ECS, etc.), pasa esa URI en su lugar.
+
+El despliegue a AWS (ECS vía Terraform) es responsabilidad de otro bloque —
+esta imagen es el único contrato: build, y correr con esas dos env vars.
+
 ## Endpoints
 
 | Método | Ruta                  | Descripción                                             |
