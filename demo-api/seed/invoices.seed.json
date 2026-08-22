@@ -3,36 +3,81 @@
     "_id": "INV-1001",
     "customer": "Distribuidora Andina SAS",
     "line_items": [
-      { "sku": "SKU-2001", "qty": 10, "unit_price": 45000, "subtotal": 450000 },
-      { "sku": "SKU-2002", "qty": 5, "unit_price": 32000, "subtotal": 160000 }
+      {
+        "sku": "SKU-2001",
+        "qty": 10,
+        "unit_price": 45000,
+        "subtotal": 450000
+      },
+      {
+        "sku": "SKU-2002",
+        "qty": 5,
+        "unit_price": 32000,
+        "subtotal": 160000
+      }
     ],
     "total": 610000,
     "status": "paid",
     "audit_log": [
-      { "ts": "2026-07-28T09:15:00Z", "action": "created", "actor": "maria.gomez" },
-      { "ts": "2026-07-28T09:20:00Z", "action": "issued", "actor": "maria.gomez" },
-      { "ts": "2026-08-02T14:05:00Z", "action": "paid", "actor": "system" }
+      {
+        "ts": "2026-07-28T09:15:00Z",
+        "action": "created",
+        "actor": "maria.gomez"
+      },
+      {
+        "ts": "2026-07-28T09:20:00Z",
+        "action": "issued",
+        "actor": "maria.gomez"
+      },
+      {
+        "ts": "2026-08-02T14:05:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
     ]
   },
   {
     "_id": "INV-1002",
     "customer": "Comercializadora del Valle Ltda",
     "line_items": [
-      { "sku": "SKU-2003", "qty": 20, "unit_price": 15000, "subtotal": 300000 }
+      {
+        "sku": "SKU-2003",
+        "qty": 20,
+        "unit_price": 15000,
+        "subtotal": 300000
+      }
     ],
     "total": 300000,
     "status": "issued",
     "audit_log": [
-      { "ts": "2026-08-10T11:00:00Z", "action": "created", "actor": "juan.perez" },
-      { "ts": "2026-08-10T11:05:00Z", "action": "issued", "actor": "juan.perez" }
+      {
+        "ts": "2026-08-10T11:00:00Z",
+        "action": "created",
+        "actor": "juan.perez"
+      },
+      {
+        "ts": "2026-08-10T11:05:00Z",
+        "action": "issued",
+        "actor": "juan.perez"
+      }
     ]
   },
   {
     "_id": "INV-1003",
     "customer": "Almacenes El Progreso SAS",
     "line_items": [
-      { "sku": "SKU-2004", "qty": 8, "unit_price": 60000, "subtotal": 480000 },
-      { "sku": "SKU-2005", "qty": 2, "unit_price": 120000, "subtotal": 240000 }
+      {
+        "sku": "SKU-2004",
+        "qty": 8,
+        "unit_price": 60000,
+        "subtotal": 480000
+      },
+      {
+        "sku": "SKU-2005",
+        "qty": 2,
+        "unit_price": 120000,
+        "subtotal": 240000
+      }
     ],
     "total": 720000,
     "status": "draft",
@@ -42,37 +87,87 @@
     "_id": "INV-1004",
     "customer": "Textiles Bogotá SAS",
     "line_items": [
-      { "sku": "SKU-2006", "qty": 15, "unit_price": 28000, "subtotal": 420000 },
-      { "sku": "SKU-2007", "qty": 6, "unit_price": 55000, "subtotal": 330000 },
-      { "sku": "SKU-2008", "qty": 3, "unit_price": 90000, "subtotal": 270000 }
+      {
+        "sku": "SKU-2006",
+        "qty": 15,
+        "unit_price": 28000,
+        "subtotal": 420000
+      },
+      {
+        "sku": "SKU-2007",
+        "qty": 6,
+        "unit_price": 55000,
+        "subtotal": 330000
+      },
+      {
+        "sku": "SKU-2008",
+        "qty": 3,
+        "unit_price": 90000,
+        "subtotal": 270000
+      }
     ],
     "total": 1020000,
     "status": "paid",
     "audit_log": [
-      { "ts": "2026-07-15T08:30:00Z", "action": "created", "actor": "laura.ramirez" },
-      { "ts": "2026-07-15T08:40:00Z", "action": "issued", "actor": "laura.ramirez" },
-      { "ts": "2026-07-20T16:00:00Z", "action": "paid", "actor": "system" }
+      {
+        "ts": "2026-07-15T08:30:00Z",
+        "action": "created",
+        "actor": "laura.ramirez"
+      },
+      {
+        "ts": "2026-07-15T08:40:00Z",
+        "action": "issued",
+        "actor": "laura.ramirez"
+      },
+      {
+        "ts": "2026-07-20T16:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
     ]
   },
   {
     "_id": "INV-1005",
     "customer": "Ferretería Continental SAS",
     "line_items": [
-      { "sku": "SKU-2009", "qty": 25, "unit_price": 12000, "subtotal": 300000 },
-      { "sku": "SKU-2010", "qty": 4, "unit_price": 75000, "subtotal": 300000 }
+      {
+        "sku": "SKU-2009",
+        "qty": 25,
+        "unit_price": 12000,
+        "subtotal": 300000
+      },
+      {
+        "sku": "SKU-2010",
+        "qty": 4,
+        "unit_price": 75000,
+        "subtotal": 300000
+      }
     ],
     "total": 600000,
     "status": "issued",
     "audit_log": [
-      { "ts": "2026-08-18T10:00:00Z", "action": "created", "actor": "carlos.diaz" },
-      { "ts": "2026-08-18T10:10:00Z", "action": "issued", "actor": "carlos.diaz" }
+      {
+        "ts": "2026-08-18T10:00:00Z",
+        "action": "created",
+        "actor": "carlos.diaz"
+      },
+      {
+        "ts": "2026-08-18T10:10:00Z",
+        "action": "issued",
+        "actor": "carlos.diaz"
+      }
     ]
   },
   {
     "_id": "INV-1006",
     "customer": "Alimentos La Cosecha SAS",
     "line_items": [
-      { "sku": "SKU-2011", "qty": 100, "unit_price": 3500, "subtotal": 350000 }
+      {
+        "sku": "SKU-2011",
+        "qty": 100,
+        "unit_price": 3500,
+        "subtotal": 350000
+      }
     ],
     "total": 350000,
     "status": "draft",
@@ -82,36 +177,81 @@
     "_id": "INV-1007",
     "customer": "Transportes Rápidos del Norte SAS",
     "line_items": [
-      { "sku": "SKU-2012", "qty": 1, "unit_price": 1250000, "subtotal": 1250000 }
+      {
+        "sku": "SKU-2012",
+        "qty": 1,
+        "unit_price": 1250000,
+        "subtotal": 1250000
+      }
     ],
     "total": 1250000,
     "status": "paid",
     "audit_log": [
-      { "ts": "2026-06-30T09:00:00Z", "action": "created", "actor": "sofia.martinez" },
-      { "ts": "2026-06-30T09:05:00Z", "action": "issued", "actor": "sofia.martinez" },
-      { "ts": "2026-07-05T12:00:00Z", "action": "paid", "actor": "system" }
+      {
+        "ts": "2026-06-30T09:00:00Z",
+        "action": "created",
+        "actor": "sofia.martinez"
+      },
+      {
+        "ts": "2026-06-30T09:05:00Z",
+        "action": "issued",
+        "actor": "sofia.martinez"
+      },
+      {
+        "ts": "2026-07-05T12:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
     ]
   },
   {
     "_id": "INV-1008",
     "customer": "Constructora Horizonte SAS",
     "line_items": [
-      { "sku": "SKU-2013", "qty": 50, "unit_price": 22000, "subtotal": 1100000 },
-      { "sku": "SKU-2014", "qty": 10, "unit_price": 45000, "subtotal": 450000 }
+      {
+        "sku": "SKU-2013",
+        "qty": 50,
+        "unit_price": 22000,
+        "subtotal": 1100000
+      },
+      {
+        "sku": "SKU-2014",
+        "qty": 10,
+        "unit_price": 45000,
+        "subtotal": 450000
+      }
     ],
     "total": 1550000,
     "status": "issued",
     "audit_log": [
-      { "ts": "2026-08-20T13:00:00Z", "action": "created", "actor": "andres.lopez" },
-      { "ts": "2026-08-20T13:15:00Z", "action": "issued", "actor": "andres.lopez" }
+      {
+        "ts": "2026-08-20T13:00:00Z",
+        "action": "created",
+        "actor": "andres.lopez"
+      },
+      {
+        "ts": "2026-08-20T13:15:00Z",
+        "action": "issued",
+        "actor": "andres.lopez"
+      }
     ]
   },
   {
     "_id": "INV-1009",
     "customer": "Papelería Central SAS",
     "line_items": [
-      { "sku": "SKU-2015", "qty": 30, "unit_price": 8000, "subtotal": 240000 },
-      { "sku": "SKU-2016", "qty": 12, "unit_price": 15000, "subtotal": 180000 }
+      {
+        "sku": "SKU-2015",
+        "qty": 30,
+        "unit_price": 8000,
+        "subtotal": 240000
+      },
+      {
+        "sku": "SKU-2016",
+        "qty": 12,
+        "unit_price": 15000,
+        "subtotal": 180000
+      }
     ],
     "total": 420000,
     "status": "draft",
@@ -121,39 +261,642 @@
     "_id": "INV-1010",
     "customer": "Droguería San Rafael SAS",
     "line_items": [
-      { "sku": "SKU-2017", "qty": 40, "unit_price": 9500, "subtotal": 380000 }
+      {
+        "sku": "SKU-2017",
+        "qty": 40,
+        "unit_price": 9500,
+        "subtotal": 380000
+      }
     ],
     "total": 380000,
     "status": "paid",
     "audit_log": [
-      { "ts": "2026-07-01T07:45:00Z", "action": "created", "actor": "paula.torres" },
-      { "ts": "2026-07-01T07:50:00Z", "action": "issued", "actor": "paula.torres" },
-      { "ts": "2026-07-06T10:20:00Z", "action": "paid", "actor": "system" }
+      {
+        "ts": "2026-07-01T07:45:00Z",
+        "action": "created",
+        "actor": "paula.torres"
+      },
+      {
+        "ts": "2026-07-01T07:50:00Z",
+        "action": "issued",
+        "actor": "paula.torres"
+      },
+      {
+        "ts": "2026-07-06T10:20:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
     ]
   },
   {
     "_id": "INV-1011",
     "customer": "Muebles y Diseños Andinos SAS",
     "line_items": [
-      { "sku": "SKU-2018", "qty": 3, "unit_price": 380000, "subtotal": 1140000 },
-      { "sku": "SKU-2019", "qty": 2, "unit_price": 210000, "subtotal": 420000 }
+      {
+        "sku": "SKU-2018",
+        "qty": 3,
+        "unit_price": 380000,
+        "subtotal": 1140000
+      },
+      {
+        "sku": "SKU-2019",
+        "qty": 2,
+        "unit_price": 210000,
+        "subtotal": 420000
+      }
     ],
     "total": 1560000,
     "status": "issued",
     "audit_log": [
-      { "ts": "2026-08-15T15:00:00Z", "action": "created", "actor": "jorge.hernandez" },
-      { "ts": "2026-08-15T15:10:00Z", "action": "issued", "actor": "jorge.hernandez" }
+      {
+        "ts": "2026-08-15T15:00:00Z",
+        "action": "created",
+        "actor": "jorge.hernandez"
+      },
+      {
+        "ts": "2026-08-15T15:10:00Z",
+        "action": "issued",
+        "actor": "jorge.hernandez"
+      }
     ]
   },
   {
     "_id": "INV-1012",
     "customer": "Repuestos El Motor SAS",
     "line_items": [
-      { "sku": "SKU-2020", "qty": 6, "unit_price": 95000, "subtotal": 570000 },
-      { "sku": "SKU-2021", "qty": 1, "unit_price": 250000, "subtotal": 250000 }
+      {
+        "sku": "SKU-2020",
+        "qty": 6,
+        "unit_price": 95000,
+        "subtotal": 570000
+      },
+      {
+        "sku": "SKU-2021",
+        "qty": 1,
+        "unit_price": 250000,
+        "subtotal": 250000
+      }
     ],
     "total": 820000,
     "status": "draft",
     "audit_log": []
+  },
+  {
+    "_id": "INV-1013",
+    "customer": "Distribuciones El Faro SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3002",
+        "qty": 9,
+        "unit_price": 25000,
+        "subtotal": 225000
+      },
+      {
+        "sku": "SKU-3001",
+        "qty": 8,
+        "unit_price": 12000,
+        "subtotal": 96000
+      },
+      {
+        "sku": "SKU-3012",
+        "qty": 8,
+        "unit_price": 400000,
+        "subtotal": 3200000
+      }
+    ],
+    "total": 3521000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1014",
+    "customer": "Comercial Andina de Occidente SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3007",
+        "qty": 3,
+        "unit_price": 95000,
+        "subtotal": 285000
+      },
+      {
+        "sku": "SKU-3001",
+        "qty": 7,
+        "unit_price": 12000,
+        "subtotal": 84000
+      },
+      {
+        "sku": "SKU-3014",
+        "qty": 8,
+        "unit_price": 110000,
+        "subtotal": 880000
+      }
+    ],
+    "total": 1249000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1015",
+    "customer": "Suministros Industriales del Caribe SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3004",
+        "qty": 23,
+        "unit_price": 60000,
+        "subtotal": 1380000
+      },
+      {
+        "sku": "SKU-3012",
+        "qty": 18,
+        "unit_price": 400000,
+        "subtotal": 7200000
+      },
+      {
+        "sku": "SKU-3011",
+        "qty": 14,
+        "unit_price": 72000,
+        "subtotal": 1008000
+      }
+    ],
+    "total": 9588000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1016",
+    "customer": "Grupo Empresarial La Sabana SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3013",
+        "qty": 26,
+        "unit_price": 30000,
+        "subtotal": 780000
+      }
+    ],
+    "total": 780000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1017",
+    "customer": "Textiles y Confecciones Bogotá SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3003",
+        "qty": 25,
+        "unit_price": 8000,
+        "subtotal": 200000
+      },
+      {
+        "sku": "SKU-3004",
+        "qty": 11,
+        "unit_price": 60000,
+        "subtotal": 660000
+      }
+    ],
+    "total": 860000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1018",
+    "customer": "Agroindustrias Cafeteras SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3006",
+        "qty": 28,
+        "unit_price": 35000,
+        "subtotal": 980000
+      }
+    ],
+    "total": 980000,
+    "status": "draft",
+    "audit_log": []
+  },
+  {
+    "_id": "INV-1019",
+    "customer": "Logística y Transporte Andino SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3012",
+        "qty": 15,
+        "unit_price": 400000,
+        "subtotal": 6000000
+      }
+    ],
+    "total": 6000000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-08-04T09:00:00Z",
+        "action": "created",
+        "actor": "daniela.ospina"
+      },
+      {
+        "ts": "2026-08-04T09:15:00Z",
+        "action": "issued",
+        "actor": "daniela.ospina"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1020",
+    "customer": "Metalúrgica Nacional SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3009",
+        "qty": 10,
+        "unit_price": 220000,
+        "subtotal": 2200000
+      }
+    ],
+    "total": 2200000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-08-20T09:00:00Z",
+        "action": "created",
+        "actor": "santiago.vargas"
+      },
+      {
+        "ts": "2026-08-20T09:15:00Z",
+        "action": "issued",
+        "actor": "santiago.vargas"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1021",
+    "customer": "Distribuidora de Alimentos Pacífico SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3004",
+        "qty": 2,
+        "unit_price": 60000,
+        "subtotal": 120000
+      },
+      {
+        "sku": "SKU-3012",
+        "qty": 22,
+        "unit_price": 400000,
+        "subtotal": 8800000
+      },
+      {
+        "sku": "SKU-3002",
+        "qty": 8,
+        "unit_price": 25000,
+        "subtotal": 200000
+      }
+    ],
+    "total": 9120000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-07-03T09:00:00Z",
+        "action": "created",
+        "actor": "camilo.suarez"
+      },
+      {
+        "ts": "2026-07-03T09:15:00Z",
+        "action": "issued",
+        "actor": "camilo.suarez"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1022",
+    "customer": "Comercializadora Los Andes Ltda",
+    "line_items": [
+      {
+        "sku": "SKU-3007",
+        "qty": 9,
+        "unit_price": 95000,
+        "subtotal": 855000
+      }
+    ],
+    "total": 855000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-07-12T09:00:00Z",
+        "action": "created",
+        "actor": "valentina.rios"
+      },
+      {
+        "ts": "2026-07-12T09:15:00Z",
+        "action": "issued",
+        "actor": "valentina.rios"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1023",
+    "customer": "Insumos Médicos del Centro SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3006",
+        "qty": 22,
+        "unit_price": 35000,
+        "subtotal": 770000
+      },
+      {
+        "sku": "SKU-3004",
+        "qty": 9,
+        "unit_price": 60000,
+        "subtotal": 540000
+      }
+    ],
+    "total": 1310000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-08-03T09:00:00Z",
+        "action": "created",
+        "actor": "valentina.rios"
+      },
+      {
+        "ts": "2026-08-03T09:15:00Z",
+        "action": "issued",
+        "actor": "valentina.rios"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1024",
+    "customer": "Ferretería y Construcción Total SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3012",
+        "qty": 15,
+        "unit_price": 400000,
+        "subtotal": 6000000
+      },
+      {
+        "sku": "SKU-3004",
+        "qty": 13,
+        "unit_price": 60000,
+        "subtotal": 780000
+      },
+      {
+        "sku": "SKU-3003",
+        "qty": 9,
+        "unit_price": 8000,
+        "subtotal": 72000
+      }
+    ],
+    "total": 6852000,
+    "status": "issued",
+    "audit_log": [
+      {
+        "ts": "2026-08-18T09:00:00Z",
+        "action": "created",
+        "actor": "camilo.suarez"
+      },
+      {
+        "ts": "2026-08-18T09:15:00Z",
+        "action": "issued",
+        "actor": "camilo.suarez"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1025",
+    "customer": "Editorial y Papelería Nueva Era SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3006",
+        "qty": 25,
+        "unit_price": 35000,
+        "subtotal": 875000
+      },
+      {
+        "sku": "SKU-3014",
+        "qty": 2,
+        "unit_price": 110000,
+        "subtotal": 220000
+      },
+      {
+        "sku": "SKU-3013",
+        "qty": 8,
+        "unit_price": 30000,
+        "subtotal": 240000
+      }
+    ],
+    "total": 1335000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-06-11T09:00:00Z",
+        "action": "created",
+        "actor": "daniela.ospina"
+      },
+      {
+        "ts": "2026-06-11T09:15:00Z",
+        "action": "issued",
+        "actor": "daniela.ospina"
+      },
+      {
+        "ts": "2026-06-14T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1026",
+    "customer": "Tecnología y Sistemas del Caribe SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3002",
+        "qty": 30,
+        "unit_price": 25000,
+        "subtotal": 750000
+      },
+      {
+        "sku": "SKU-3004",
+        "qty": 19,
+        "unit_price": 60000,
+        "subtotal": 1140000
+      }
+    ],
+    "total": 1890000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-08-11T09:00:00Z",
+        "action": "created",
+        "actor": "camilo.suarez"
+      },
+      {
+        "ts": "2026-08-11T09:15:00Z",
+        "action": "issued",
+        "actor": "camilo.suarez"
+      },
+      {
+        "ts": "2026-08-14T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1027",
+    "customer": "Distribuidora Automotriz Colombiana SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3008",
+        "qty": 15,
+        "unit_price": 18000,
+        "subtotal": 270000
+      },
+      {
+        "sku": "SKU-3007",
+        "qty": 5,
+        "unit_price": 95000,
+        "subtotal": 475000
+      },
+      {
+        "sku": "SKU-3011",
+        "qty": 9,
+        "unit_price": 72000,
+        "subtotal": 648000
+      }
+    ],
+    "total": 1393000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-06-08T09:00:00Z",
+        "action": "created",
+        "actor": "isabella.moreno"
+      },
+      {
+        "ts": "2026-06-08T09:15:00Z",
+        "action": "issued",
+        "actor": "isabella.moreno"
+      },
+      {
+        "ts": "2026-06-11T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1028",
+    "customer": "Servicios Empresariales Andinos SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3010",
+        "qty": 13,
+        "unit_price": 5000,
+        "subtotal": 65000
+      },
+      {
+        "sku": "SKU-3007",
+        "qty": 12,
+        "unit_price": 95000,
+        "subtotal": 1140000
+      },
+      {
+        "sku": "SKU-3015",
+        "qty": 8,
+        "unit_price": 15000,
+        "subtotal": 120000
+      }
+    ],
+    "total": 1325000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-06-17T09:00:00Z",
+        "action": "created",
+        "actor": "mateo.acosta"
+      },
+      {
+        "ts": "2026-06-17T09:15:00Z",
+        "action": "issued",
+        "actor": "mateo.acosta"
+      },
+      {
+        "ts": "2026-06-20T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1029",
+    "customer": "Manufacturas del Valle SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3013",
+        "qty": 2,
+        "unit_price": 30000,
+        "subtotal": 60000
+      }
+    ],
+    "total": 60000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-06-05T09:00:00Z",
+        "action": "created",
+        "actor": "valentina.rios"
+      },
+      {
+        "ts": "2026-06-05T09:15:00Z",
+        "action": "issued",
+        "actor": "valentina.rios"
+      },
+      {
+        "ts": "2026-06-08T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
+  },
+  {
+    "_id": "INV-1030",
+    "customer": "Almacenes Unidos de Santander SAS",
+    "line_items": [
+      {
+        "sku": "SKU-3007",
+        "qty": 13,
+        "unit_price": 95000,
+        "subtotal": 1235000
+      },
+      {
+        "sku": "SKU-3010",
+        "qty": 13,
+        "unit_price": 5000,
+        "subtotal": 65000
+      },
+      {
+        "sku": "SKU-3002",
+        "qty": 20,
+        "unit_price": 25000,
+        "subtotal": 500000
+      }
+    ],
+    "total": 1800000,
+    "status": "paid",
+    "audit_log": [
+      {
+        "ts": "2026-07-17T09:00:00Z",
+        "action": "created",
+        "actor": "isabella.moreno"
+      },
+      {
+        "ts": "2026-07-17T09:15:00Z",
+        "action": "issued",
+        "actor": "isabella.moreno"
+      },
+      {
+        "ts": "2026-07-20T14:00:00Z",
+        "action": "paid",
+        "actor": "system"
+      }
+    ]
   }
 ]
