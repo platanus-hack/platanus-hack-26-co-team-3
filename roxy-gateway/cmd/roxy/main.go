@@ -14,11 +14,14 @@ import (
 	"roxy-gateway/internal/security"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
+	_ = godotenv.Load(".env", "roxy-gateway/.env")
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
@@ -37,10 +40,18 @@ func main() {
 	}
 
 	db := client.Database(cfg.MongoDBName)
+	var evaluator policy.Evaluator
+	if cfg.AnthropicAPIKey != "" {
+		log.Printf("evaluator: anthropic model=%s", cfg.AnthropicModel)
+		evaluator = policy.NewAnthropicClient(cfg.AnthropicBaseURL, cfg.AnthropicAPIKey, cfg.AnthropicModel)
+	} else {
+		log.Printf("evaluator: openrouter model=%s", cfg.OpenRouterModel)
+		evaluator = policy.NewClient(cfg.OpenRouterBaseURL, cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	}
 	svc := gateway.New(
 		mcp.NewRepository(db),
 		security.NewRepository(db),
-		policy.NewClient(cfg.OpenRouterBaseURL, cfg.OpenRouterAPIKey, cfg.OpenRouterModel),
+		evaluator,
 		dashboard.NewClient(cfg.DashboardURL),
 	)
 

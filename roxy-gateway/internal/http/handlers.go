@@ -47,7 +47,10 @@ func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
 			case errors.Is(err, mcp.ErrNotFound):
 				c.JSON(http.StatusNotFound, gin.H{"error": "mcp not found"})
 			case errors.Is(err, policy.ErrUnavailable):
-				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "evaluator unavailable"})
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error":  "evaluator unavailable",
+					"detail": err.Error(),
+				})
 			default:
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			}
