@@ -19,6 +19,7 @@ type Server struct {
 type Authorization struct {
 	Type           string `bson:"type" json:"type"`
 	CredentialsRef string `bson:"credentialsRef,omitempty" json:"credentialsRef,omitempty"`
+	Credentials    string `bson:"credentials,omitempty" json:"credentials,omitempty"`
 }
 
 type MCP struct {

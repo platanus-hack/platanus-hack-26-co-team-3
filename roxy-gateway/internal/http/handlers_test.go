@@ -35,11 +35,12 @@ func TestEvaluateHandler(t *testing.T) {
 	rule := mcp.Rule{Priority: 1, Instruction: "deny any write operation outside working hours"}
 
 	tests := []struct {
-		name       string
-		body       any
-		svc        stubService
-		wantStatus int
-		wantSubstr string
+		name        string
+		body        any
+		svc         stubService
+		wantStatus  int
+		wantSubstr  string
+		wantMissing string
 	}{
 		{
 			name:       "400 missing action",
@@ -72,8 +73,9 @@ func TestEvaluateHandler(t *testing.T) {
 				Reason:       "drop table violates write rule",
 				LogID:        "abc",
 			}},
-			wantStatus: http.StatusOK,
-			wantSubstr: `"decision":"denied"`,
+			wantStatus:  http.StatusOK,
+			wantSubstr:  `"decision":"denied"`,
+			wantMissing: `"credentials"`,
 		},
 		{
 			name: "200 approved",
@@ -89,9 +91,17 @@ func TestEvaluateHandler(t *testing.T) {
 				AccessedBy: "agent-orchestrator-01",
 				Reason:     "stock read allowed",
 				LogID:      "def",
+				Connection: &gateway.Connection{
+					URL:      "https://mcp.internal/inventory",
+					Protocol: "sse",
+					Authorization: mcp.Authorization{
+						Type:        "apiKey",
+						Credentials: "inv_key_demo",
+					},
+				},
 			}},
 			wantStatus: http.StatusOK,
-			wantSubstr: `"decision":"approved"`,
+			wantSubstr: `"credentials":"inv_key_demo"`,
 		},
 	}
 
@@ -107,6 +117,9 @@ func TestEvaluateHandler(t *testing.T) {
 			r.ServeHTTP(w, req)
 			require.Equal(t, tt.wantStatus, w.Code)
 			require.Contains(t, w.Body.String(), tt.wantSubstr)
+			if tt.wantMissing != "" {
+				require.NotContains(t, w.Body.String(), tt.wantMissing)
+			}
 		})
 	}
 }

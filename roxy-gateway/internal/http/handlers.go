@@ -20,12 +20,13 @@ type evaluateRequest struct {
 }
 
 type evaluateResponse struct {
-	Decision     string    `json:"decision"`
-	MCPName      string    `json:"mcpName"`
-	AccessedBy   string    `json:"accessedBy"`
-	ViolatedRule *mcp.Rule `json:"violatedRule"`
-	Reason       string    `json:"reason"`
-	LogID        string    `json:"logId"`
+	Decision     string              `json:"decision"`
+	MCPName      string              `json:"mcpName"`
+	AccessedBy   string              `json:"accessedBy"`
+	ViolatedRule *mcp.Rule           `json:"violatedRule"`
+	Reason       string              `json:"reason"`
+	LogID        string              `json:"logId"`
+	Connection   *gateway.Connection `json:"connection"`
 }
 
 func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
@@ -64,6 +65,7 @@ func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
 			ViolatedRule: result.ViolatedRule,
 			Reason:       result.Reason,
 			LogID:        result.LogID,
+			Connection:   result.Connection,
 		})
 	}
 }
