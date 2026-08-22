@@ -62,8 +62,8 @@ Por ejemplo,
     - [ ] API de dashboard que lee logs
     - [ ] Frontend que muestra logs pero principalmente alertas
 
-4. [ ] API funcional de demo con datos en Mongodb - **Freddy**
-    - [ ] Defecto de posible falla en inconsistencia de datos
+4. [x] API funcional de demo con datos en Mongodb - **Freddy**
+    - [x] Defecto de posible falla en inconsistencia de datos
 
 5. [ ] Langchain/Other flujo de agentes para demo - **Andres**
     - [ ] 2 agentes, 1 orquestador que recibe tarea y que lance múltiples sub-agentes y que algunos de esos agentes hagan operaciones que no deben y otros operaciones que si, para que se muestre como quedan operaciones indebidas las cuales el agente no sepa cuales son.
