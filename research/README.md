@@ -15,6 +15,10 @@ sin código de aplicación (ver excepción de Bloque 6 en `CLAUDE.md`).
   A2A/agentes delegados en la industria, e impacto/tamaño de mercado.
 - [existing-solutions.md](existing-solutions.md) — soluciones existentes
   (DOF-MESH y otras), y el hueco de posicionamiento que ocupa Roxy.
+- [architecture-diagram.md](architecture-diagram.md) — diagramas Mermaid
+  del estado actual de la arquitectura (componentes, flujo de una
+  petición, los 3 escenarios del demo). Se itera a medida que entre más
+  información al `idea.md` o avancen los bloques sin código todavía.
 
 ## Cómo se usa esto
 
