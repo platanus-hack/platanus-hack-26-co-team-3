@@ -46,6 +46,21 @@
   *Uso en slide: la mejor cifra "de aquí a poco esto va a explotar" de
   todo el set.*
 
+- **Un jugador enterprise enorme se está moviendo justo ahora, y
+  todavía no llegó:** Workday (11,500+ organizaciones, 65%+ del
+  Fortune 500 — y uno de los 50+ partners iniciales de A2A)
+  anunció el 2 de junio de 2026 "Agent Passport", una capa de
+  gobernanza/identidad para agentes de IA. Sigue en **acceso
+  anticipado para el 2do semestre de 2026**, con disponibilidad
+  general recién proyectada para fin de año — ni siquiera Workday
+  tiene esto en producción todavía, y opera en una capa distinta
+  (identidad/atestación del agente, no la frontera A2A→MCP que
+  cubre Roxy — ver [existing-solutions.md](existing-solutions.md)).
+  [Workday Newsroom, 2-jun-2026](https://newsroom.workday.com/2026-06-02-Workday-Launches-Agent-Passport-to-Test,-Verify,-and-Continuously-Monitor-Every-AI-Agent-in-the-Enterprise).
+  *Uso en slide: valida el timing ("hasta Workday se está moviendo
+  recién ahora") sin que se lea como que Roxy ya tiene competencia
+  directa.*
+
 - **El gap de gobernanza, con números:** Gartner nombró "Agentic AI
   Demands Cybersecurity Oversight" y "IAM Adapts to AI Agents" como las
   dos tendencias de ciberseguridad #1 para 2026 — la gestión de identidad
