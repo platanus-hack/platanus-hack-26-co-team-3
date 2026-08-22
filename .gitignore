@@ -1,0 +1,7 @@
+# Superpowers / agent runtime (not source)
+.superpowers/
+
+# Per-user Claude overrides — do not share
+.claude/settings.local.json
+
+.DS_Store

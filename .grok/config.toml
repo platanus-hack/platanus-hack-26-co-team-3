@@ -1,0 +1,4 @@
+# Project-scoped plugin config. After git pull, Grok enables Superpowers
+# from .grok/plugins/superpowers for everyone working in this repo.
+[plugins]
+enabled = ["superpowers"]

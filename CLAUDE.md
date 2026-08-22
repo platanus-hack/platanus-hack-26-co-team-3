@@ -82,3 +82,19 @@ If a request seems to require touching more than one block's folder outside of
 these exceptions, stop and ask the user which block it belongs to, or whether
 they intend a genuine cross-block integration change (which should be called
 out explicitly, not assumed).
+
+## Superpowers (required)
+
+This repo vendors [Superpowers](https://github.com/obra/superpowers) at
+`.grok/plugins/superpowers`. After `git pull`, Grok and Claude Code load it
+without a personal plugin install. Treat it as mandatory.
+
+- At the start of every conversation, follow `using-superpowers` before acting.
+- If a Superpowers skill applies (brainstorming, TDD, debugging, planning,
+  review, verification), read that skill's `SKILL.md` and follow it.
+- Skills: `.grok/plugins/superpowers/skills/`
+- Grok: enabled by `.grok/config.toml`. Rules: `.grok/rules/superpowers.md`.
+- Claude Code: enabled by `.claude/settings.json` (local marketplace).
+
+Block isolation in this file still wins if it conflicts with a Superpowers
+workflow (for example: do not read or edit another block's folder).
