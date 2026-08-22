@@ -132,11 +132,11 @@ if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" ]]; then
 fi
 
 if [[ "$DO_API" == "true" ]]; then
-  info "Building API image..."
-  docker build -t "$ECR_REPO_URL:latest" "$API_DIR"
-
-  info "Pushing API image..."
-  docker push "$ECR_REPO_URL:latest"
+  # --platform linux/amd64: the EC2 instance (t3a.micro) is x86_64. Building without an
+  # explicit platform on an Apple Silicon Mac produces an arm64-only image that ECS can't
+  # pull (CannotPullContainerError: no matching manifest for linux/amd64).
+  info "Building and pushing API image (linux/amd64)..."
+  docker buildx build --platform linux/amd64 -t "$ECR_REPO_URL:latest" --push "$API_DIR"
 
   info "Forcing new ECS deployment ($ECS_CLUSTER/$ECS_SERVICE)..."
   aws ecs update-service \
@@ -149,11 +149,8 @@ else
 fi
 
 if [[ "$DO_DEMO_API" == "true" ]]; then
-  info "Building demo-api image..."
-  docker build -t "$DEMO_API_ECR_REPO_URL:latest" "$DEMO_API_DIR"
-
-  info "Pushing demo-api image..."
-  docker push "$DEMO_API_ECR_REPO_URL:latest"
+  info "Building and pushing demo-api image (linux/amd64)..."
+  docker buildx build --platform linux/amd64 -t "$DEMO_API_ECR_REPO_URL:latest" --push "$DEMO_API_DIR"
 
   info "Forcing new ECS deployment ($ECS_CLUSTER/$DEMO_API_ECS_SERVICE)..."
   aws ecs update-service \

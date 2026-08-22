@@ -111,18 +111,19 @@ terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
 
 This provisions the bucket, CloudFront distribution, both ECR repos, and the ECS cluster/instance.
 Both ECS services will fail to start tasks until images actually exist in their ECR repos — push
-them next (same ECR login covers both repos, same registry):
+them next (same ECR login covers both repos, same registry). **Build with `--platform linux/amd64`
+explicitly** — the EC2 instance (`t3a.micro`) is x86_64, and building without a platform flag on an
+Apple Silicon Mac produces an arm64-only image that ECS can't pull
+(`CannotPullContainerError: no matching manifest for linux/amd64`):
 
 ```bash
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$(terraform -chdir=infra output -raw ecr_repository_url | cut -d/ -f1)"
 
 cd dashboard/api
-docker build -t "$(terraform -chdir=../../infra output -raw ecr_repository_url):latest" .
-docker push "$(terraform -chdir=../../infra output -raw ecr_repository_url):latest"
+docker buildx build --platform linux/amd64 -t "$(terraform -chdir=../../infra output -raw ecr_repository_url):latest" --push .
 
 cd ../../demo-api
-docker build -t "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest" .
-docker push "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest"
+docker buildx build --platform linux/amd64 -t "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest" --push .
 ```
 
 ECS will pick up new images on the next deployment. To force it immediately:
@@ -151,6 +152,11 @@ state.
 
 ## Notes and caveats
 
+- **Image architecture**: both `deploy.sh` and the manual instructions above build with
+  `docker buildx build --platform linux/amd64`. Don't drop that flag — a plain `docker build` on
+  an Apple Silicon Mac (or any arm64 machine) produces an arm64-only image, and the `t3a.micro`
+  instance is x86_64, so ECS fails every task with `CannotPullContainerError: no matching manifest
+  for linux/amd64` — a silent crash loop, not an application bug.
 - **Cost**: ~$10.50/month minimum, running 24/7, with no free-tier path — the two components that
   can't be free:
   - **EC2 t3a.micro**: ~$6.86/mo. Not free-tier eligible (the free tier only covers t2.micro/t3.micro,

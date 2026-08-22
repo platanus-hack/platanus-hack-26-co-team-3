@@ -6,12 +6,13 @@ Block 3 (idea.md): frontend for the Roxy dashboard. Vite + React + TypeScript.
 
 ```bash
 npm install
-cp .env.example .env   # edit VITE_API_URL if the dashboard API isn't local
+cp .env.example .env   # defaults to the deployed API (roxygt.lat); point VITE_API_URL
+                        # at http://localhost:8000 instead if running the API locally
 npm run dev
 ```
 
-Requires the [dashboard API](../api) running and reachable at `VITE_API_URL`
-(defaults to `http://localhost:8000`).
+Requires the [dashboard API](../api) reachable at `VITE_API_URL` (defaults to
+`https://roxygt.lat/api`, the deployed API through CloudFront).
 
 ## Screens
 
