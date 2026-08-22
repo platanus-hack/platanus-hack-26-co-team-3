@@ -18,6 +18,7 @@ must work within this repo.
 | 7 | Demo interactivo                                                     | Todos    | `demo/`                  |
 | 8 | Landing Page                                                         | Freddy   | `landing-page/`          |
 | 9 | Langchain interceptor class (trace de nodos → DB)                    | Santiago | `langchain-interceptor/` |
+| 10 | Verificador determinista (Z3) de las decisiones de Roxy              | Sebastian | `verifier/`             |
 
 Root-level files (`README.md`, `idea.md`, `project-description.md`,
 `platanus-hack-project.jsonc`, `project-logo.png`) are project metadata, not part
