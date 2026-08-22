@@ -49,6 +49,7 @@ def list_security_logs(
     logs = []
     for doc in cursor:
         doc["_id"] = str(doc["_id"])
-        doc["mcpId"] = str(doc["mcpId"])
+        if doc.get("mcpId") is not None:
+            doc["mcpId"] = str(doc["mcpId"])
         logs.append(SecurityLog.model_validate(doc))
     return logs

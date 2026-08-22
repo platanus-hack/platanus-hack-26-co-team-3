@@ -45,7 +45,7 @@ export function LogDrawer({ log, onClose }: LogDrawerProps) {
           </div>
           <div className="drawer-field">
             <div className="drawer-field-label">MCP ID</div>
-            <div className="drawer-field-value mono muted">{log.mcpId}</div>
+            <div className="drawer-field-value mono muted">{log.mcpId ?? 'Unknown'}</div>
           </div>
           <div className="drawer-field">
             <div className="drawer-field-label">Description</div>

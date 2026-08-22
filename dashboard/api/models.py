@@ -15,7 +15,7 @@ class SecurityLog(BaseModel):
 
     id: str = Field(alias="_id")
     status: SecurityStatus
-    mcp_id: str = Field(alias="mcpId")
+    mcp_id: Optional[str] = Field(default=None, alias="mcpId")
     mcp_name: Optional[str] = Field(default=None, alias="mcpName")
     time: datetime
     accessed_by: str = Field(alias="accessedBy")
