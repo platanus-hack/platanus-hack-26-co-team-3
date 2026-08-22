@@ -1,4 +1,4 @@
-import { GridIcon, ListIcon, ShieldIcon } from './icons'
+import { GridIcon, ListIcon } from './icons'
 
 export type View = 'overview' | 'logs'
 
@@ -11,8 +11,8 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
-        <ShieldIcon />
-        <span>Roxy</span>
+        <img src="/logo.png" alt="" className="brand-logo" />
+        <span className="brand-name">Roxy</span>
       </div>
 
       <div className="sidebar-nav">

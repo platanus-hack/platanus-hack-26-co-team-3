@@ -53,6 +53,10 @@
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
+
+  .brand-logo {
+    filter: invert(1);
+  }
 }
 
 * { box-sizing: border-box; }
@@ -124,12 +128,22 @@ code {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 4px 10px 26px;
-  font-size: 16px;
-  font-weight: 600;
+}
+
+.brand-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.brand-name {
+  font-family: 'Abril Fatface', Georgia, 'Times New Roman', serif;
+  font-size: 23px;
+  line-height: 1;
   color: var(--text-h);
-  letter-spacing: -0.2px;
+  letter-spacing: 0.2px;
 }
 
 .sidebar-nav {

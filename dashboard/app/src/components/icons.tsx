@@ -1,23 +1,3 @@
-export function ShieldIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 2.5L4 5.5V11C4 16.2 7.4 20.9 12 22C16.6 20.9 20 16.2 20 11V5.5L12 2.5Z"
-        stroke="var(--accent)"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 12L11 14.5L16 9"
-        stroke="var(--accent)"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 export function GridIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
