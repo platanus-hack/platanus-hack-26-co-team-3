@@ -13,6 +13,13 @@ import (
 	"roxy-gateway/internal/mcp"
 )
 
+const (
+	maxEvaluateAttempts = 3
+	maxRetryAfter       = 8 * time.Second
+	openRouterTimeout   = 45 * time.Second
+	maxCompletionTokens = 256
+)
+
 const systemPrompt = `You are Roxy, a security gateway that decides whether an agent may call an MCP.
 Compare the agent's action and payload against the MCP rules (priority order, lower number first).
 A rule is violated when the agent's intended operation would break the rule's instruction.
@@ -30,7 +37,7 @@ type Client struct {
 
 func NewClient(baseURL, apiKey, model string) *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: &http.Client{Timeout: openRouterTimeout},
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		apiKey:     apiKey,
 		model:      model,
@@ -40,6 +47,7 @@ func NewClient(baseURL, apiKey, model string) *Client {
 type chatRequest struct {
 	Model          string            `json:"model"`
 	Temperature    float64           `json:"temperature"`
+	MaxTokens      int               `json:"max_tokens"`
 	ResponseFormat map[string]string `json:"response_format"`
 	Messages       []chatMessage     `json:"messages"`
 }
@@ -67,6 +75,7 @@ func (c *Client) Evaluate(ctx context.Context, in Input) (Result, error) {
 	body, err := json.Marshal(chatRequest{
 		Model:       c.model,
 		Temperature: 0,
+		MaxTokens:   maxCompletionTokens,
 		ResponseFormat: map[string]string{
 			"type": "json_object",
 		},
@@ -79,49 +88,119 @@ func (c *Client) Evaluate(ctx context.Context, in Input) (Result, error) {
 		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 
+	var lastErr error
+	for attempt := 1; attempt <= maxEvaluateAttempts; attempt++ {
+		raw, status, retryAfter, err := c.complete(ctx, body)
+		if err != nil {
+			return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		if status == http.StatusTooManyRequests {
+			lastErr = fmt.Errorf("%w: openrouter status %d: %s", ErrUnavailable, status, openRouterErrorMessage(raw))
+			if attempt == maxEvaluateAttempts {
+				break
+			}
+			if err := sleepRetry(ctx, retryAfter); err != nil {
+				return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+			}
+			continue
+		}
+		if status < 200 || status >= 300 {
+			return Result{}, fmt.Errorf("%w: openrouter status %d: %s", ErrUnavailable, status, openRouterErrorMessage(raw))
+		}
+
+		var parsed chatResponse
+		if err := json.Unmarshal(raw, &parsed); err != nil {
+			return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
+			return Result{}, fmt.Errorf("%w: empty choices", ErrUnavailable)
+		}
+
+		var decision modelDecision
+		if err := json.Unmarshal([]byte(parsed.Choices[0].Message.Content), &decision); err != nil {
+			return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+
+		out := Result{
+			Allowed: decision.Allowed,
+			Reason:  decision.Reason,
+		}
+		if !decision.Allowed && decision.ViolatedPriority != nil {
+			out.ViolatedRule = ruleByPriority(in.MCP.Rules, *decision.ViolatedPriority)
+		}
+		return out, nil
+	}
+	return Result{}, lastErr
+}
+
+func (c *Client) complete(ctx context.Context, body []byte) (raw []byte, status int, retryAfter time.Duration, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return nil, 0, 0, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "http://localhost")
+	req.Header.Set("X-Title", "roxy-gateway")
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return nil, 0, 0, err
 	}
 	defer res.Body.Close()
 
-	raw, err := io.ReadAll(res.Body)
+	raw, err = io.ReadAll(res.Body)
 	if err != nil {
-		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return nil, res.StatusCode, 0, err
 	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return Result{}, fmt.Errorf("%w: openrouter status %d", ErrUnavailable, res.StatusCode)
-	}
+	return raw, res.StatusCode, parseRetryAfter(res.Header.Get("Retry-After")), nil
+}
 
-	var parsed chatResponse
-	if err := json.Unmarshal(raw, &parsed); err != nil {
-		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+func parseRetryAfter(header string) time.Duration {
+	if header == "" {
+		return 5 * time.Second
 	}
-	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
-		return Result{}, fmt.Errorf("%w: empty choices", ErrUnavailable)
+	n, err := time.ParseDuration(header + "s")
+	if err != nil || n < 0 {
+		return time.Second
 	}
+	if n > maxRetryAfter {
+		return maxRetryAfter
+	}
+	return n
+}
 
-	var decision modelDecision
-	if err := json.Unmarshal([]byte(parsed.Choices[0].Message.Content), &decision); err != nil {
-		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+func sleepRetry(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
 	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
 
-	out := Result{
-		Allowed: decision.Allowed,
-		Reason:  decision.Reason,
+func openRouterErrorMessage(raw []byte) string {
+	var payload struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
-	if !decision.Allowed && decision.ViolatedPriority != nil {
-		out.ViolatedRule = ruleByPriority(in.MCP.Rules, *decision.ViolatedPriority)
+	if err := json.Unmarshal(raw, &payload); err == nil && payload.Error.Message != "" {
+		return payload.Error.Message
 	}
-	return out, nil
+	msg := strings.TrimSpace(string(raw))
+	if len(msg) > 240 {
+		msg = msg[:240]
+	}
+	if msg == "" {
+		return "empty body"
+	}
+	return msg
 }
 
 func userPrompt(in Input) string {

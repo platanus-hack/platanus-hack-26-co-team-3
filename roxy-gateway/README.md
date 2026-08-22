@@ -1,25 +1,25 @@
 # roxy-gateway
 
-API **roxy**: capa de seguridad entre agentes y MCPs. V1 evalúa cada llamado contra las rules del MCP en Mongo, usando un LLM en OpenRouter. No reenvía al MCP.
+API **roxy**: capa de seguridad entre agentes y MCPs. V1 evalúa cada llamado contra las rules del MCP en Mongo, usando Anthropic (o OpenRouter como fallback). No reenvía al MCP.
 
 ## Qué hace
 
 `POST /v1/evaluate` → carga el MCP por `mcpName` → el LLM compara `action` + `payload` con las rules → escribe un documento en `security` (approved o denied) → notifica al dashboard (siempre, fail-open) → responde la decisión.
 
-Si OpenRouter no responde: `503`, sin log ni notify. Si el MCP no existe: `404`.
+Si el evaluador (Anthropic/OpenRouter) no responde: `503`, sin log ni notify. Si el MCP no existe: `404`.
 
 ## Requisitos
 
 - Go 1.22+
 - Mongo en `mongodb://localhost:27017`, database `roxy` (el bloque `mongo-data` lo levanta con `./run.sh`)
-- `OPENROUTER_API_KEY`
+- `ANTHROPIC_API_KEY` (preferido) o `OPENROUTER_API_KEY`
 
 ## Config
 
 ```bash
 cd roxy-gateway
 cp .env.example .env
-# edita OPENROUTER_API_KEY
+# edita ANTHROPIC_API_KEY
 set -a && source .env && set +a
 ```
 
@@ -28,7 +28,10 @@ set -a && source .env && set +a
 | `HTTP_ADDR` | `:8080` | |
 | `MONGO_URI` | required | |
 | `MONGO_DB_NAME` | `roxy` | |
-| `OPENROUTER_API_KEY` | required | |
+| `ANTHROPIC_API_KEY` | una de las dos keys | preferida si está seteada |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` | effort `low` para clasificar rules barato y rápido |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | |
+| `OPENROUTER_API_KEY` | una de las dos keys | fallback si no hay Anthropic |
 | `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | |
 | `DASHBOARD_URL` | vacío = no-op | POST JSON en allow y deny |
@@ -38,6 +41,15 @@ set -a && source .env && set +a
 ```bash
 go test ./...
 ```
+
+## Docker
+
+```bash
+docker build -t roxy-gateway .
+docker run --rm -p 8080:8080 --env-file .env -e HTTP_ADDR=:8080 roxy-gateway
+```
+
+Producción (Render + Atlas): ver [DEPLOY.md](DEPLOY.md).
 
 ## Run
 

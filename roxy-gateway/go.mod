@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	github.com/gin-gonic/gin v1.10.0
+	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.12.1
 	go.mongodb.org/mongo-driver v1.17.9
 )
