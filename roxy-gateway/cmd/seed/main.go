@@ -69,6 +69,7 @@ func mockMCPs(now time.Time) []mcp.MCP {
 			Authorization: mcp.Authorization{
 				Type:           "bearer",
 				CredentialsRef: "vault://roxy/mcp/mongo-catalog",
+				Credentials:    "tok_catalog_demo",
 			},
 			Rules: []mcp.Rule{
 				{Priority: 1, Instruction: "deny any write operation outside working hours"},
@@ -84,6 +85,7 @@ func mockMCPs(now time.Time) []mcp.MCP {
 			Authorization: mcp.Authorization{
 				Type:           "oauth2",
 				CredentialsRef: "vault://roxy/mcp/payments",
+				Credentials:    "tok_payments_demo",
 			},
 			Rules: []mcp.Rule{
 				{Priority: 1, Instruction: "deny writes to 'transactions' from non-orchestrator agents"},
@@ -99,6 +101,7 @@ func mockMCPs(now time.Time) []mcp.MCP {
 			Authorization: mcp.Authorization{
 				Type:           "apiKey",
 				CredentialsRef: "vault://roxy/mcp/inventory",
+				Credentials:    "inv_key_demo",
 			},
 			Rules: []mcp.Rule{
 				{Priority: 1, Instruction: "allow stock read for all delegated agents"},

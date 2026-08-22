@@ -67,6 +67,15 @@ func catalogMCP() *mcp.MCP {
 	return &mcp.MCP{
 		ID:   primitive.NewObjectID(),
 		Name: "mongo-catalog-mcp",
+		Server: mcp.Server{
+			URL:      "https://mcp.internal/mongo-catalog",
+			Protocol: "mcp",
+		},
+		Authorization: mcp.Authorization{
+			Type:           "bearer",
+			CredentialsRef: "vault://roxy/mcp/mongo-catalog",
+			Credentials:    "tok_catalog_demo",
+		},
 		Rules: []mcp.Rule{
 			{Priority: 1, Instruction: "deny any write operation outside working hours"},
 		},
@@ -167,6 +176,13 @@ func TestService_Evaluate(t *testing.T) {
 			require.Equal(t, tt.wantStatus, logs.entries[0].Status)
 			require.Len(t, notes.calls, tt.wantNotes)
 			require.Equal(t, tt.wantStatus, notes.calls[0].Status)
+			if tt.wantDec == "approved" {
+				require.NotNil(t, got.Connection)
+				require.Equal(t, "https://mcp.internal/mongo-catalog", got.Connection.URL)
+				require.Equal(t, "tok_catalog_demo", got.Connection.Authorization.Credentials)
+			} else {
+				require.Nil(t, got.Connection)
+			}
 			if tt.wantRule {
 				require.NotNil(t, got.ViolatedRule)
 				require.Equal(t, 1, got.ViolatedRule.Priority)

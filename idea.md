@@ -8,6 +8,26 @@ Desde marzo de 2026 se comenzo el desarrollo de A2A, el cual promueve la idea de
 Un sistema de agente de seguridad para los MCPs el cual maneja el protocolo A2A para comunicarse con los agentes delegados y determina si permite acceso (hace exchange de token) preguntando al agente cual es la intencion, o asumiendo de la request del agente al MCP (agente agnostico a la capa de seguridad). Adicionalmente el sistema de seguridad reporta los intentos de acceso indebido para trazabilidad.
 
 
+## Context
+Roxy es un agente que vigila la entrada de peticiones a los MCPS. Este no interactua con agentes, sino con el contexto entregado a los MCPs. Apartir de este contexto verifica una por una las reglas del MCP. El modo de verificacion se basa en comprobar si el contexto de entrada se ajusta dentro del contenido de la regla, escencialmente respondiendo la pregunta para cada regla:
+
+    "Este contexto peticion, se encuenta bajo lo que rige esta regla?"
+
+Por ejemplo,
+
+    MCP Objetivo: MongoDB Atlas
+    Context: "Borrar documentos 1, 2 y 3 de collecion ropa"
+    Rules:
+        - 1. "No borrar coleccion"
+        - 2. "No borrar documentos de la collecion ropa"
+    
+    Ejecucion:
+        1. Context -> Rule 1 = Cumple (Contexto no busca borrar collecion)
+        2. Context -> Rule 2 = NO-Cumple (Contexto busca borrar documentos de collecion ropa)
+    
+    Veredicto: all(1., 2.) = NO
+
+
 ## Bloques
 1. [x] Datos de Mongo (schema y mock) - **Santiago**
     - [x] MCPs

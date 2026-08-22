@@ -46,6 +46,12 @@ type EvaluateRequest struct {
 	Payload    []byte
 }
 
+type Connection struct {
+	URL           string            `json:"url"`
+	Protocol      string            `json:"protocol,omitempty"`
+	Authorization mcp.Authorization `json:"authorization"`
+}
+
 type EvaluateResponse struct {
 	Decision     string
 	MCPName      string
@@ -53,6 +59,7 @@ type EvaluateResponse struct {
 	ViolatedRule *mcp.Rule
 	Reason       string
 	LogID        string
+	Connection   *Connection
 }
 
 func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateResponse, error) {
@@ -112,12 +119,24 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateRe
 		log.Printf("dashboard notify failed: %v", err)
 	}
 
-	return EvaluateResponse{
+	resp := EvaluateResponse{
 		Decision:     decision,
 		MCPName:      doc.Name,
 		AccessedBy:   req.AccessedBy,
 		ViolatedRule: result.ViolatedRule,
 		Reason:       description,
 		LogID:        logID,
-	}, nil
+	}
+	if result.Allowed {
+		resp.Connection = connectionFrom(doc)
+	}
+	return resp, nil
+}
+
+func connectionFrom(doc *mcp.MCP) *Connection {
+	return &Connection{
+		URL:           doc.Server.URL,
+		Protocol:      doc.Server.Protocol,
+		Authorization: doc.Authorization,
+	}
 }
