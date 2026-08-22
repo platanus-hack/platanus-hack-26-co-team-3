@@ -1,0 +1,37 @@
+[
+  {
+    "status": "approved",
+    "mcpName": "mongo-catalog-mcp",
+    "time": "2026-08-20T09:15:00Z",
+    "accessedBy": "agent-orchestrator-01",
+    "description": "Read-only query on 'orders' approved per rule priority 2"
+  },
+  {
+    "status": "denied",
+    "mcpName": "payments-mcp",
+    "time": "2026-08-20T09:17:32Z",
+    "accessedBy": "agent-subtask-07",
+    "description": "Attempted write to 'transactions' denied — rule priority 1 violation"
+  },
+  {
+    "status": "approved",
+    "mcpName": "inventory-mcp",
+    "time": "2026-08-20T10:02:11Z",
+    "accessedBy": "agent-orchestrator-01",
+    "description": "Stock read approved per rule priority 1"
+  },
+  {
+    "status": "denied",
+    "mcpName": "inventory-mcp",
+    "time": "2026-08-20T10:05:47Z",
+    "accessedBy": "agent-subtask-12",
+    "description": "Bulk stock adjustment of 5000 units denied — rule priority 2 violation"
+  },
+  {
+    "status": "denied",
+    "mcpName": "payments-mcp",
+    "time": "2026-08-20T11:20:03Z",
+    "accessedBy": "agent-subtask-03",
+    "description": "Refund attempted without intent confirmation — rule priority 2 violation"
+  }
+]

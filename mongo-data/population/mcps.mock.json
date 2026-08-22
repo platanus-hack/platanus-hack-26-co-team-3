@@ -1,0 +1,56 @@
+[
+  {
+    "name": "mongo-catalog-mcp",
+    "description": "MCP exposing read/write access to the product catalog database",
+    "server": {
+      "url": "https://mcp.internal/mongo-catalog",
+      "protocol": "mcp"
+    },
+    "authorization": {
+      "type": "bearer",
+      "credentialsRef": "vault://roxy/mcp/mongo-catalog"
+    },
+    "rules": [
+      { "priority": 1, "instruction": "deny any write operation outside working hours" },
+      { "priority": 2, "instruction": "allow read-only queries on the 'orders' collection" }
+    ],
+    "createdAt": "2026-08-01T12:00:00Z",
+    "updatedAt": "2026-08-01T12:00:00Z"
+  },
+  {
+    "name": "payments-mcp",
+    "description": "MCP exposing payment processing and transaction records",
+    "server": {
+      "url": "https://mcp.internal/payments",
+      "protocol": "mcp"
+    },
+    "authorization": {
+      "type": "oauth2",
+      "credentialsRef": "vault://roxy/mcp/payments"
+    },
+    "rules": [
+      { "priority": 1, "instruction": "deny writes to 'transactions' from non-orchestrator agents" },
+      { "priority": 2, "instruction": "require explicit intent confirmation for refunds" }
+    ],
+    "createdAt": "2026-08-02T09:30:00Z",
+    "updatedAt": "2026-08-02T09:30:00Z"
+  },
+  {
+    "name": "inventory-mcp",
+    "description": "MCP exposing warehouse inventory levels and stock adjustments",
+    "server": {
+      "url": "https://mcp.internal/inventory",
+      "protocol": "sse"
+    },
+    "authorization": {
+      "type": "apiKey",
+      "credentialsRef": "vault://roxy/mcp/inventory"
+    },
+    "rules": [
+      { "priority": 1, "instruction": "allow stock read for all delegated agents" },
+      { "priority": 2, "instruction": "deny bulk stock adjustments above 1000 units" }
+    ],
+    "createdAt": "2026-08-03T15:45:00Z",
+    "updatedAt": "2026-08-03T15:45:00Z"
+  }
+]
