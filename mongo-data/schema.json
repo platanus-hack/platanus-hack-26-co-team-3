@@ -1,0 +1,116 @@
+{
+  "database": "roxy",
+  "collections": {
+    "mcps": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "title": "mcps",
+          "required": ["name", "server", "authorization", "rules", "createdAt", "updatedAt"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "name": {
+              "bsonType": "string",
+              "description": "MCP display name"
+            },
+            "description": {
+              "bsonType": "string",
+              "description": "What this MCP does / exposes"
+            },
+            "server": {
+              "bsonType": "object",
+              "required": ["url"],
+              "properties": {
+                "url": { "bsonType": "string", "description": "MCP server endpoint" },
+                "protocol": {
+                  "bsonType": "string",
+                  "enum": ["mcp", "http", "sse"],
+                  "description": "Transport used to reach the server"
+                }
+              }
+            },
+            "authorization": {
+              "bsonType": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "bsonType": "string",
+                  "enum": ["bearer", "apiKey", "oauth2"],
+                  "description": "Authorization scheme used against this MCP"
+                },
+                "credentialsRef": {
+                  "bsonType": "string",
+                  "description": "Pointer to the credential in a secret store (never the raw secret)"
+                }
+              }
+            },
+            "rules": {
+              "bsonType": "array",
+              "description": "Access rules evaluated by Roxy Gateway when routing a request",
+              "items": {
+                "bsonType": "object",
+                "required": ["priority", "instruction"],
+                "properties": {
+                  "priority": {
+                    "bsonType": "int",
+                    "description": "Lower number = evaluated first"
+                  },
+                  "instruction": {
+                    "bsonType": "string",
+                    "description": "Rule instruction, e.g. 'deny writes to collection X'"
+                  }
+                }
+              }
+            },
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": "date" }
+          }
+        }
+      },
+      "indexes": [
+        { "keys": { "name": 1 }, "options": { "unique": true } }
+      ]
+    },
+    "security": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "title": "security",
+          "required": ["status", "mcpId", "time", "accessedBy", "description"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["approved", "denied"],
+              "description": "Estado: outcome of the access attempt"
+            },
+            "mcpId": {
+              "bsonType": "objectId",
+              "description": "MCP ingresado: reference to mcps._id"
+            },
+            "mcpName": {
+              "bsonType": "string",
+              "description": "Denormalized snapshot of the MCP name at log time, for fast dashboard reads"
+            },
+            "time": {
+              "bsonType": "date",
+              "description": "When the access attempt happened"
+            },
+            "accessedBy": {
+              "bsonType": "string",
+              "description": "Who accessed: delegated agent identifier/token subject"
+            },
+            "description": {
+              "bsonType": "string",
+              "description": "Log description: human-readable detail of the attempt/decision"
+            }
+          }
+        }
+      },
+      "indexes": [
+        { "keys": { "mcpId": 1, "time": -1 }, "options": {} },
+        { "keys": { "status": 1, "time": -1 }, "options": {} }
+      ]
+    }
+  }
+}
