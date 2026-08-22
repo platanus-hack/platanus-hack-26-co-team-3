@@ -63,7 +63,7 @@
       "modified": 1755849600000,
       "created": 1755849600000,
       "name": "Errors",
-      "description": "Validation and not-found responses (no OpenRouter call on 400).",
+      "description": "Validation and not-found responses (no evaluator call on 400).",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -1000,

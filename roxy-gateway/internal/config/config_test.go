@@ -17,78 +17,46 @@ func TestLoad(t *testing.T) {
 		{
 			name: "defaults",
 			env: map[string]string{
-				"MONGO_URI":           "mongodb://localhost:27017",
-				"OPENROUTER_API_KEY":  "sk-test",
-				"ANTHROPIC_API_KEY":   "",
-				"HTTP_ADDR":           "",
-				"MONGO_DB_NAME":       "",
-				"OPENROUTER_MODEL":    "",
-				"OPENROUTER_BASE_URL": "",
-				"ANTHROPIC_MODEL":     "",
-				"ANTHROPIC_BASE_URL":  "",
-				"DASHBOARD_URL":       "",
-				"PORT":                "",
+				"MONGO_URI":     "mongodb://localhost:27017",
+				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
+				"HTTP_ADDR":     "",
+				"MONGO_DB_NAME": "",
+				"PORT":          "",
+				"DASHBOARD_URL": "",
 			},
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, ":8080", cfg.HTTPAddr)
 				require.Equal(t, "roxy", cfg.MongoDBName)
-				require.Equal(t, "openai/gpt-4o-mini", cfg.OpenRouterModel)
-				require.Equal(t, "https://openrouter.ai/api/v1", cfg.OpenRouterBaseURL)
 				require.Equal(t, "mongodb://localhost:27017", cfg.MongoURI)
-				require.Equal(t, "sk-test", cfg.OpenRouterAPIKey)
+				require.Equal(t, "http://127.0.0.1:8080/evaluate", cfg.EvaluatorURL)
 			},
 		},
 		{
 			name: "missing mongo",
 			env: map[string]string{
-				"MONGO_URI":          "",
-				"OPENROUTER_API_KEY": "sk-test",
+				"MONGO_URI":     "",
+				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
 			},
 			wantErr: "MONGO_URI",
 		},
 		{
-			name: "missing llm key",
+			name: "missing evaluator url",
 			env: map[string]string{
-				"MONGO_URI":          "mongodb://localhost:27017",
-				"OPENROUTER_API_KEY": "",
-				"ANTHROPIC_API_KEY":  "",
+				"MONGO_URI":     "mongodb://localhost:27017",
+				"EVALUATOR_URL": "",
 			},
-			wantErr: "ANTHROPIC_API_KEY or OPENROUTER_API_KEY",
-		},
-		{
-			name: "anthropic key is enough",
-			env: map[string]string{
-				"MONGO_URI":          "mongodb://localhost:27017",
-				"OPENROUTER_API_KEY": "",
-				"ANTHROPIC_API_KEY":  "sk-ant-test",
-			},
-			check: func(t *testing.T, cfg Config) {
-				require.Equal(t, "sk-ant-test", cfg.AnthropicAPIKey)
-				require.Equal(t, "claude-sonnet-5", cfg.AnthropicModel)
-			},
+			wantErr: "EVALUATOR_URL",
 		},
 		{
 			name: "render PORT overrides HTTP_ADDR",
 			env: map[string]string{
-				"MONGO_URI":          "mongodb://localhost:27017",
-				"ANTHROPIC_API_KEY":  "sk-ant-test",
-				"OPENROUTER_API_KEY": "",
-				"HTTP_ADDR":          ":8080",
-				"PORT":               "10000",
+				"MONGO_URI":     "mongodb://localhost:27017",
+				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
+				"HTTP_ADDR":     ":8080",
+				"PORT":          "10000",
 			},
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, ":10000", cfg.HTTPAddr)
-			},
-		},
-		{
-			name: "trims openrouter base url",
-			env: map[string]string{
-				"MONGO_URI":           "mongodb://localhost:27017",
-				"OPENROUTER_API_KEY":  "sk-test",
-				"OPENROUTER_BASE_URL": "https://example.com/v1/",
-			},
-			check: func(t *testing.T, cfg Config) {
-				require.Equal(t, "https://example.com/v1", cfg.OpenRouterBaseURL)
 			},
 		},
 	}
