@@ -12,7 +12,7 @@ import (
 
 func TestHealth(t *testing.T) {
 	t.Parallel()
-	r := httpapi.NewRouter()
+	r := httpapi.NewRouter(stubService{})
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
