@@ -48,6 +48,15 @@ Concretely, when working on a block:
 - If the folder for a block doesn't exist yet, create it and do the work inside
   it — don't scatter files at the repo root or inside another block's folder.
 
+The only exception to reading another block's folder is when the user
+**explicitly** names the other block/folder and asks to read from it — e.g.
+"read file x from `roxy-gateway/`" or "check how block 2 defines its schema".
+In that case, reading is allowed, but it must stay read-only reference: unless
+the user also explicitly asks for it, do not copy, import, or base the current
+block's implementation on what was read. Never read another block's folder on
+your own inference that it might be "related" or "useful context" — only do it
+when asked to, by name.
+
 ### Example
 
 If asked to "create a dashboard UI", work exclusively inside `dashboard/`:
