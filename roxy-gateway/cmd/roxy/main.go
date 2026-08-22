@@ -40,19 +40,13 @@ func main() {
 	}
 
 	db := client.Database(cfg.MongoDBName)
-	var evaluator policy.Evaluator
-	if cfg.AnthropicAPIKey != "" {
-		log.Printf("evaluator: anthropic model=%s", cfg.AnthropicModel)
-		evaluator = policy.NewAnthropicClient(cfg.AnthropicBaseURL, cfg.AnthropicAPIKey, cfg.AnthropicModel)
-	} else {
-		log.Printf("evaluator: openrouter model=%s", cfg.OpenRouterModel)
-		evaluator = policy.NewClient(cfg.OpenRouterBaseURL, cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
-	}
+	log.Printf("evaluator: %s", cfg.EvaluatorURL)
 	svc := gateway.New(
 		mcp.NewRepository(db),
 		security.NewRepository(db),
-		evaluator,
+		policy.NewRemoteClient(cfg.EvaluatorURL),
 		dashboard.NewClient(cfg.DashboardURL),
+		gateway.NewMCPClient(),
 	)
 
 	gin.SetMode(gin.ReleaseMode)

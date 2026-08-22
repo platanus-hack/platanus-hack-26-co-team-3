@@ -1,12 +1,16 @@
 # roxy-gateway
 
-API **roxy**: capa de seguridad entre agentes y MCPs. V1 evalúa cada llamado contra las rules del MCP en Mongo, usando Anthropic (o OpenRouter como fallback). No reenvía al MCP.
+API **roxy**: capa de seguridad entre agentes y MCPs. V1 no evalúa rules: llama a un **evaluator API**, y según el veredicto pega al MCP o corta el acceso.
 
 ## Qué hace
 
-`POST /v1/evaluate` → carga el MCP por `mcpName` → el LLM compara `action` + `payload` con las rules → escribe un documento en `security` (approved o denied) → notifica al dashboard (siempre, fail-open) → responde la decisión.
+`POST /v1/evaluate` → carga el MCP por `mcpName` → POST al evaluator (`EVALUATOR_URL`) con mcp (id, name, description, rules) + request (accessedBy, action, payload) + time, **sin credenciales** → log en `security` + notify dashboard →
 
-Si el evaluador (Anthropic/OpenRouter) no responde: `503`, sin log ni notify. Si el MCP no existe: `404`.
+- evaluator `allowed: true` → Roxy usa `authorization.credentials` del MCP, POST a `server.url`, y **devuelve la respuesta cruda del MCP**
+- evaluator `allowed: false` → **403** sin body
+- evaluator caído → **503** (sin log ni notify)
+- MCP caído después del allow → **502**
+- MCP no existe → **404**
 
 ## API
 
@@ -91,32 +95,31 @@ Libre. Lo que más usa el evaluador:
 "payload": { "intent": "issue a refund", "amount": 250 }
 ```
 
-### Response body
+### Response (hacia el agente)
 
-| Campo | Cuándo |
-|--------|--------|
-| `decision` | `"approved"` o `"denied"` |
-| `mcpName` | eco del MCP evaluado |
-| `accessedBy` | eco del agente |
-| `violatedRule` | rule rota (`priority` + `instruction`), o `null` si approved |
-| `reason` | texto del modelo |
-| `logId` | id del documento en `security` |
-| `connection` | **solo si approved**: `url`, `protocol`, `authorization` (`type`, `credentialsRef`, `credentials`). Si denied → `null` |
+| Evaluator | HTTP Roxy | Body |
+|-----------|-----------|------|
+| `allowed: true` | el status que devolvió el MCP (suele 200) | **crudo del MCP** (no el JSON de Roxy) |
+| `allowed: false` | **403** | vacío |
+| evaluator down | **503** | `{"error":"evaluator unavailable"}` |
+| MCP down | **502** | `{"error":"mcp unavailable"}` |
 
-El dashboard recibe el mismo outcome (status, mcp, agent, rule, description) **sin** `connection` ni credenciales.
+Las credenciales **no** se devuelven al agente: Roxy las usa para pegarle al MCP. El dashboard sigue recibiendo status, mcp, agent, rule y description, sin secretos.
+
+El evaluator responde `allowed`, `violatedPriority`, `reason` (lo que usa Roxy). `attributes` y `governingRule` son transparencia del evaluator; Roxy no los exige.
 
 ## Requisitos
 
 - Go 1.22+
 - Mongo en `mongodb://localhost:27017`, database `roxy` (el bloque `mongo-data` lo levanta con `./run.sh`)
-- `ANTHROPIC_API_KEY` (preferido) o `OPENROUTER_API_KEY`
+- `EVALUATOR_URL` (API de veredicto, p.ej. `http://127.0.0.1:8080/evaluate`)
 
 ## Config
 
 ```bash
 cd roxy-gateway
 cp .env.example .env
-# edita ANTHROPIC_API_KEY
+# edita EVALUATOR_URL (y MONGO_URI)
 set -a && source .env && set +a
 ```
 
@@ -125,12 +128,7 @@ set -a && source .env && set +a
 | `HTTP_ADDR` | `:8080` | |
 | `MONGO_URI` | required | |
 | `MONGO_DB_NAME` | `roxy` | |
-| `ANTHROPIC_API_KEY` | una de las dos keys | preferida si está seteada |
-| `ANTHROPIC_MODEL` | `claude-sonnet-5` | effort `low` para clasificar rules barato y rápido |
-| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | |
-| `OPENROUTER_API_KEY` | una de las dos keys | fallback si no hay Anthropic |
-| `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | |
+| `EVALUATOR_URL` | required | `POST` JSON del contrato evaluator |
 | `DASHBOARD_URL` | vacío = no-op | POST JSON en allow y deny |
 
 ## Tests
@@ -160,20 +158,22 @@ Health:
 curl -s localhost:8080/health
 ```
 
-Deny (drop table contra `mongo-catalog-mcp`):
+Si el evaluator corre en `:8080`, levanta Roxy en otro puerto (`HTTP_ADDR=:3000`).
+
+Deny (403 vacío):
 
 ```bash
-curl -s -X POST localhost:8080/v1/evaluate \
+curl -i -X POST localhost:8080/v1/evaluate \
   -H 'Content-Type: application/json' \
   -d '{"mcpName":"mongo-catalog-mcp","accessedBy":"agent-subtask-07","action":"drop_table","payload":{"intent":"DROP TABLE orders"}}'
 ```
 
-Allow (lectura de inventario):
+Allow (body = respuesta cruda del MCP):
 
 ```bash
-curl -s -X POST localhost:8080/v1/evaluate \
+curl -i -X POST localhost:8080/v1/evaluate \
   -H 'Content-Type: application/json' \
   -d '{"mcpName":"inventory-mcp","accessedBy":"agent-orchestrator-01","action":"read","payload":{"intent":"read stock levels"}}'
 ```
 
-Cada respuesta 200 deja un documento en `roxy.security`.
+Allow y deny dejan un documento en `roxy.security` y un POST al dashboard.

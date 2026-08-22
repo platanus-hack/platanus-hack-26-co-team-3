@@ -19,16 +19,6 @@ type evaluateRequest struct {
 	Payload    json.RawMessage `json:"payload"`
 }
 
-type evaluateResponse struct {
-	Decision     string              `json:"decision"`
-	MCPName      string              `json:"mcpName"`
-	AccessedBy   string              `json:"accessedBy"`
-	ViolatedRule *mcp.Rule           `json:"violatedRule"`
-	Reason       string              `json:"reason"`
-	LogID        string              `json:"logId"`
-	Connection   *gateway.Connection `json:"connection"`
-}
-
 func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req evaluateRequest
@@ -52,20 +42,29 @@ func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
 					"error":  "evaluator unavailable",
 					"detail": err.Error(),
 				})
+			case errors.Is(err, policy.ErrUpstream):
+				c.JSON(http.StatusBadGateway, gin.H{
+					"error":  "mcp unavailable",
+					"detail": err.Error(),
+				})
 			default:
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			}
 			return
 		}
 
-		c.JSON(http.StatusOK, evaluateResponse{
-			Decision:     result.Decision,
-			MCPName:      result.MCPName,
-			AccessedBy:   result.AccessedBy,
-			ViolatedRule: result.ViolatedRule,
-			Reason:       result.Reason,
-			LogID:        result.LogID,
-			Connection:   result.Connection,
-		})
+		if !result.Allowed {
+			c.Status(http.StatusForbidden)
+			return
+		}
+		if result.Upstream == nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "mcp unavailable"})
+			return
+		}
+		ct := result.Upstream.ContentType
+		if ct == "" {
+			ct = "application/json"
+		}
+		c.Data(result.Upstream.StatusCode, ct, result.Upstream.Body)
 	}
 }

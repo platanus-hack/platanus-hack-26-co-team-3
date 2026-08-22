@@ -7,7 +7,10 @@ import (
 	"roxy-gateway/internal/mcp"
 )
 
-var ErrUnavailable = errors.New("evaluator unavailable")
+var (
+	ErrUnavailable = errors.New("evaluator unavailable")
+	ErrUpstream    = errors.New("mcp upstream unavailable")
+)
 
 type Input struct {
 	MCP        mcp.MCP
@@ -24,4 +27,14 @@ type Result struct {
 
 type Evaluator interface {
 	Evaluate(ctx context.Context, in Input) (Result, error)
+}
+
+func ruleByPriority(rules []mcp.Rule, priority int) *mcp.Rule {
+	for i := range rules {
+		if rules[i].Priority == priority {
+			rule := rules[i]
+			return &rule
+		}
+	}
+	return nil
 }
