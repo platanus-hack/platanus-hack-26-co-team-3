@@ -55,9 +55,10 @@ def main():
     print(f"Tarea del orquestador: {TASK}\n")
     outcome = run_task(TASK)
 
-    print("\n--- Resultado por subagente ---")
+    print("\n--- Resultado por hoja (indentado por profundidad de la cadena) ---")
     for r in outcome["results"]:
-        print(f"* {r['invoice_id']} ({r['accessed_by']}): {r['output']}")
+        indent = "  " * r["depth"]
+        print(f"{indent}* {r['invoice_id']} ({r['accessed_by']}, profundidad={r['depth']}): {r['output']}")
 
     after = _get_consistency()
     print(f"\nConsistencia DESPUES: {json.dumps(after, ensure_ascii=False)}\n")
