@@ -27,40 +27,84 @@ cd "$INFRA_DIR"
 EXISTING_VPC_ID=""
 EXISTING_SUBNET_ID=""
 EXISTING_ACM_ARN=""
+EXISTING_DOMAIN_ALIASES=""
 if [[ -f "$TFVARS_FILE" ]]; then
   EXISTING_VPC_ID=$(sed -n -E 's/^vpc_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_SUBNET_ID=$(sed -n -E 's/^subnet_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_ACM_ARN=$(sed -n -E 's/^acm_certificate_arn *= *"(.*)"$/\1/p' "$TFVARS_FILE")
+  EXISTING_DOMAIN_ALIASES=$(sed -n -E 's/^domain_aliases *= *\[(.*)\]$/\1/p' "$TFVARS_FILE" | sed -E 's/"//g; s/, */,/g')
 fi
 
 info "Configuration"
 
-read -r -s -p "MongoDB connection string (mongo_uri, input hidden): " MONGO_URI
-echo ""
+# Each value is taken from the environment if already set (e.g. by deploy-from-env.sh) —
+# only prompts interactively for whatever's missing.
+MONGO_URI="${MONGO_URI:-}"
+if [[ -z "$MONGO_URI" ]]; then
+  read -r -s -p "MongoDB connection string (mongo_uri, input hidden): " MONGO_URI
+  echo ""
+fi
 [[ -n "$MONGO_URI" ]] || { echo "ERROR: mongo_uri is required."; exit 1; }
 
-read -r -p "VPC id (vpc_id)${EXISTING_VPC_ID:+ [$EXISTING_VPC_ID]}: " VPC_ID
-VPC_ID="${VPC_ID:-$EXISTING_VPC_ID}"
+VPC_ID="${VPC_ID:-}"
+if [[ -z "$VPC_ID" ]]; then
+  read -r -p "VPC id (vpc_id)${EXISTING_VPC_ID:+ [$EXISTING_VPC_ID]}: " VPC_ID
+  VPC_ID="${VPC_ID:-$EXISTING_VPC_ID}"
+fi
 [[ -n "$VPC_ID" ]] || { echo "ERROR: vpc_id is required."; exit 1; }
 
-read -r -p "Subnet id (subnet_id)${EXISTING_SUBNET_ID:+ [$EXISTING_SUBNET_ID]}: " SUBNET_ID
-SUBNET_ID="${SUBNET_ID:-$EXISTING_SUBNET_ID}"
+SUBNET_ID="${SUBNET_ID:-}"
+if [[ -z "$SUBNET_ID" ]]; then
+  read -r -p "Subnet id (subnet_id)${EXISTING_SUBNET_ID:+ [$EXISTING_SUBNET_ID]}: " SUBNET_ID
+  SUBNET_ID="${SUBNET_ID:-$EXISTING_SUBNET_ID}"
+fi
 [[ -n "$SUBNET_ID" ]] || { echo "ERROR: subnet_id is required."; exit 1; }
 
-read -r -p "ACM certificate ARN (acm_certificate_arn, optional — blank uses the CloudFront default cert)${EXISTING_ACM_ARN:+ [$EXISTING_ACM_ARN]}: " ACM_ARN
-ACM_ARN="${ACM_ARN:-$EXISTING_ACM_ARN}"
+ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-}"
+if [[ -z "$ACM_CERTIFICATE_ARN" ]]; then
+  read -r -p "ACM certificate ARN (acm_certificate_arn, optional — blank uses the CloudFront default cert)${EXISTING_ACM_ARN:+ [$EXISTING_ACM_ARN]}: " ACM_CERTIFICATE_ARN
+  ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-$EXISTING_ACM_ARN}"
+fi
+
+DOMAIN_ALIASES="${DOMAIN_ALIASES:-}"
+if [[ -z "$DOMAIN_ALIASES" ]]; then
+  read -r -p "Domain aliases (domain_aliases, optional, comma-separated — blank for none)${EXISTING_DOMAIN_ALIASES:+ [$EXISTING_DOMAIN_ALIASES]}: " DOMAIN_ALIASES
+  DOMAIN_ALIASES="${DOMAIN_ALIASES:-$EXISTING_DOMAIN_ALIASES}"
+fi
 
 info "Writing $TFVARS_FILE..."
 {
-  echo "vpc_id    = \"$VPC_ID\""
+  echo "vpc_id = \"$VPC_ID\""
   echo "subnet_id = \"$SUBNET_ID\""
-  if [[ -n "$ACM_ARN" ]]; then
-    echo "acm_certificate_arn = \"$ACM_ARN\""
+  if [[ -n "$ACM_CERTIFICATE_ARN" ]]; then
+    echo "acm_certificate_arn = \"$ACM_CERTIFICATE_ARN\""
+  fi
+  if [[ -n "$DOMAIN_ALIASES" ]]; then
+    IFS=',' read -ra _domain_alias_items <<< "$DOMAIN_ALIASES"
+    _hcl_aliases=()
+    for _alias in "${_domain_alias_items[@]}"; do
+      _alias="$(echo "$_alias" | xargs)"
+      [[ -n "$_alias" ]] && _hcl_aliases+=("\"$_alias\"")
+    done
+    if [[ ${#_hcl_aliases[@]} -gt 0 ]]; then
+      _joined_aliases=$(IFS=,; echo "${_hcl_aliases[*]}")
+      echo "domain_aliases = [$_joined_aliases]"
+    fi
   fi
 } > "$TFVARS_FILE"
+terraform fmt "$TFVARS_FILE" >/dev/null
 
 info "terraform init..."
 terraform init -input=false
+
+info "terraform fmt -check..."
+if ! terraform fmt -check -recursive; then
+  echo "ERROR: files are not gofmt'd — run 'terraform fmt -recursive' and re-run this script."
+  exit 1
+fi
+
+info "terraform validate..."
+terraform validate
 
 if [[ "$DO_INFRA" == "true" ]]; then
   info "terraform apply..."

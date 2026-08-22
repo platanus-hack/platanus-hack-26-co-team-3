@@ -2,6 +2,7 @@ vpc_id    = "vpc-xxxxxxxx"
 subnet_id = "subnet-xxxxxxxx"
 
 # acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx"
+# domain_aliases      = ["roxygt.lat", "www.roxygt.lat"]  # needs acm_certificate_arn set too
 # mongo_db            = "roxy"
 # key_pair_name       = "my-key-pair"
 # ssh_ingress_cidr    = "203.0.113.4/32"

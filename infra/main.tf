@@ -174,17 +174,14 @@ resource "aws_security_group" "api" {
     }
   }
 
+  # Dashboard API (8000) and demo-api (8001) as one contiguous port-range rule, not two
+  # separate rules. A rule referencing a managed prefix list counts against the security
+  # group's rule quota once PER ENTRY IN THE LIST (not once per rule) — the CloudFront
+  # origin-facing list has 50-60+ CIDRs, so two separate references to it blew past the
+  # default 60-rules-per-security-group quota. One reference fits comfortably.
   ingress {
-    description     = "Dashboard API, only from CloudFront IP ranges"
+    description     = "Dashboard API + demo-api, only from CloudFront IP ranges"
     from_port       = 8000
-    to_port         = 8000
-    protocol        = "tcp"
-    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
-  }
-
-  ingress {
-    description     = "demo-api, only from CloudFront IP ranges"
-    from_port       = 8001
     to_port         = 8001
     protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]

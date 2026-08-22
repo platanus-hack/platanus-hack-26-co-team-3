@@ -71,18 +71,31 @@ aws dynamodb create-table \
 
 ## Deploy
 
-The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`,
-`vpc_id`, `subnet_id`, and `acm_certificate_arn` (blank to skip), then runs `terraform apply` and
-builds/pushes/deploys both the dashboard API and demo-api in one shot. `mongo_uri` is entered with
-hidden input and passed straight to `terraform apply -var` — it's never written to disk. The other
-three are non-secret and get saved to `terraform.tfvars` (gitignored), so the next run offers them
-back as defaults instead of asking from scratch. Pass positional flags to skip steps:
-`./scripts/deploy.sh <do_infra> <do_api> <do_app> <do_demo_api>` (each `true`/`false`, all default
-`true`).
+The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`, `vpc_id`,
+`subnet_id`, `acm_certificate_arn`, and `domain_aliases` (the last two blank to skip), then runs
+`terraform apply` and builds/pushes/deploys both the dashboard API and demo-api in one shot.
+`mongo_uri` is entered with hidden input and passed straight to `terraform apply -var` — it's never
+written to disk. The other four are non-secret and get saved to `terraform.tfvars` (gitignored), so
+the next run offers them back as defaults instead of asking from scratch. Any of the five can also
+come from the environment instead of a prompt (see `./scripts/deploy-from-env.sh` below) — whichever
+are already set are used as-is, only what's missing gets prompted for. Pass positional flags to skip
+steps: `./scripts/deploy.sh <do_infra> <do_api> <do_app> <do_demo_api>` (each `true`/`false`, all
+default `true`).
 
 ```bash
 cd infra
 ./scripts/deploy.sh
+```
+
+For a non-interactive run (CI, or just avoiding retyping things), `./scripts/deploy-from-env.sh`
+reads `mongo_uri`/`vpc_id`/`subnet_id`/`acm_certificate_arn`/`domain_aliases` from an `.env` file
+and exports them, so `deploy.sh` finds them already set and skips every prompt. `mongo_uri`,
+`vpc_id`, and `subnet_id` are required in `.env`; the other two stay optional:
+
+```bash
+cd infra
+cp .env.example .env   # fill in MONGO_URI, VPC_ID, SUBNET_ID (others optional)
+./scripts/deploy-from-env.sh
 ```
 
 To run Terraform yourself instead:
@@ -90,7 +103,7 @@ To run Terraform yourself instead:
 ```bash
 cd infra
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars: set vpc_id, subnet_id (and optionally acm_certificate_arn)
+# edit terraform.tfvars: set vpc_id, subnet_id (and optionally acm_certificate_arn, domain_aliases)
 
 terraform init
 terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
