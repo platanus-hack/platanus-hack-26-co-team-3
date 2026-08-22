@@ -3,12 +3,20 @@ from typing import Optional
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import DESCENDING
 
 from db import get_security_collection
 from models import SecurityLog, SecurityStatus
 
 app = FastAPI(title="Roxy Dashboard API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/security-logs", response_model=list[SecurityLog])

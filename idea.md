@@ -27,6 +27,9 @@ Por ejemplo,
     
     Veredicto: all(1., 2.) = NO
 
+## Dashboard
+The Roxy dashboard provides an interactive panel for users to see (for now one user) to see the logs of the requests that have arrived to Roxy, and tell what the outcome has been an a description. There are positive green logs which are telling when Roxy allowed entry, and there are negative red logs which are telling when Roxy denied entry with the reason of denial. Indepentent of the status of the log, it should show the detail of what happened in that request -- requested, status, description, time, etc --.
+
 
 ## Bloques
 1. [x] Datos de Mongo (schema y mock) - **Santiago**
