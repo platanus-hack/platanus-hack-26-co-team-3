@@ -160,7 +160,7 @@ resource "aws_ecr_repository" "api" {
 
 resource "aws_security_group" "api" {
   name_prefix = "${var.project_name}-api-"
-  description = "API instance: SSH (optional, restricted) + API port from CloudFront only"
+  description = "API instance: SSH (optional, restricted) + API ports from CloudFront only"
   vpc_id      = var.vpc_id
 
   dynamic "ingress" {
@@ -175,9 +175,17 @@ resource "aws_security_group" "api" {
   }
 
   ingress {
-    description     = "API, only from CloudFront IP ranges"
+    description     = "Dashboard API, only from CloudFront IP ranges"
     from_port       = 8000
     to_port         = 8000
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+  }
+
+  ingress {
+    description     = "demo-api, only from CloudFront IP ranges"
+    from_port       = 8001
+    to_port         = 8001
     protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
   }
@@ -317,6 +325,68 @@ resource "aws_ecs_service" "api" {
   name            = "${var.project_name}-api"
   cluster         = aws_ecs_cluster.api.id
   task_definition = aws_ecs_task_definition.api.arn
+  desired_count   = 1
+  launch_type     = "EC2"
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+}
+
+# demo-api (block 4): a second ECS service on the same EC2 instance/cluster as the
+# dashboard API, on its own port (8001) and ECR repo, sharing the instance's IAM role
+# and the mongo_uri secret (same Mongo cluster, different database).
+resource "aws_ecr_repository" "demo_api" {
+  name                 = "${var.project_name}-demo-api"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_cloudwatch_log_group" "demo_api" {
+  name              = "/ecs/${var.project_name}-demo-api"
+  retention_in_days = 3
+}
+
+resource "aws_ecs_task_definition" "demo_api" {
+  family             = "${var.project_name}-demo-api"
+  network_mode       = "host"
+  task_role_arn      = aws_iam_role.api.arn
+  execution_role_arn = aws_iam_role.api.arn
+
+  container_definitions = jsonencode([{
+    name              = "demo-api"
+    image             = "${aws_ecr_repository.demo_api.repository_url}:${var.demo_api_image_tag}"
+    essential         = true
+    memory            = 300
+    memoryReservation = 150
+    portMappings = [{
+      containerPort = 8001
+      hostPort      = 8001
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "DB_NAME", value = var.demo_api_db_name },
+    ]
+    secrets = [
+      { name = "MONGO_URI", valueFrom = aws_ssm_parameter.mongo_uri.arn },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.demo_api.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+  }])
+}
+
+resource "aws_ecs_service" "demo_api" {
+  name            = "${var.project_name}-demo-api"
+  cluster         = aws_ecs_cluster.api.id
+  task_definition = aws_ecs_task_definition.demo_api.arn
   desired_count   = 1
   launch_type     = "EC2"
 

@@ -1,31 +1,42 @@
 # infra
 
-Terraform for deploying `dashboard/api` (FastAPI backend) and `dashboard/app` (React frontend) to
-AWS, within the AWS Free Tier for a low-traffic project.
+Terraform for deploying `dashboard/api` (FastAPI backend), `dashboard/app` (React frontend), and
+`demo-api` (block 4's demo billing API) to AWS, within the AWS Free Tier for a low-traffic project.
 
 ## What this creates
 
 - **S3 bucket** (named `var.project_name`) — hosts the built frontend (`app/dist`) under the
   `app/` prefix, private, only reachable through CloudFront.
 - **CloudFront distribution** — one HTTPS domain for everything. `/*` → S3 (frontend), `/api/*` →
-  the EC2 instance (backend). Routing both through the same domain avoids CORS and avoids the
-  browser blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS certificate.
+  the EC2 instance (dashboard backend). Routing both through the same domain avoids CORS and avoids
+  the browser blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS
+  certificate. demo-api isn't routed through CloudFront (see below).
 - **CloudFront Origin Access Control (OAC)** — used only on the S3 origin. The bucket policy grants
   `s3:GetObject` on `app/*` to `cloudfront.amazonaws.com`, scoped by an `AWS:SourceArn` condition to
   this specific distribution, so nothing else (not even other CloudFront distributions) can read
   the bucket.
-- **ECR repository** — holds the API's Docker image (built from `dashboard/api/Dockerfile`).
-- **ECS cluster running on a single EC2 instance** (`t3a.micro`) — the API runs as an ECS task
-  (`EC2` launch type, host networking) rather than a hand-installed process; the instance just runs
-  the ECS agent and pulls whatever image/tag the task definition points at. The instance's security
-  group only accepts port 8000 from CloudFront's IP ranges — the API is not reachable directly.
+- **ECS cluster running on a single EC2 instance** (`t3a.micro`) — **two** ECS services share this
+  one instance/cluster, each an EC2-launch-type task with host networking (a hand-installed process
+  each, essentially, but ECS-managed):
+  - **dashboard API** — port 8000, its own ECR repo, connects to the `roxy` database.
+  - **demo-api** — port 8001, its own ECR repo, connects to the `demo_billing` database (same
+    `mongo_uri`/cluster, different database — see `demo_api_db_name`).
+
+  Both ports only accept traffic from CloudFront's IP ranges (the security group), but only the
+  dashboard API is actually wired into the CloudFront distribution's `/api/*` behavior — demo-api's
+  port is open the same way but has no CloudFront origin routing to it yet. Add one (mirroring the
+  existing `ec2-api` origin/behavior, on port 8001) if you want it served through the CDN too.
+  Because both tasks share one `t3a.micro` (1GiB RAM total, split ~700MB/300MB across the two
+  containers' hard memory limits), this is tight — watch for OOM kills under concurrent load and
+  size up the instance if that happens.
 
 ## Prerequisites
 
 - Terraform >= 1.5
-- Docker, for building the API image
+- Docker, for building the API images
 - AWS credentials configured (`aws configure`, or env vars) with permission to create the resources above
-- A MongoDB connection string reachable from the EC2 instance (Atlas, or your own)
+- A MongoDB connection string reachable from the EC2 instance (Atlas, or your own), with both a
+  `roxy` and a `demo_billing` database
 
 ## Remote state (one-time bootstrap)
 
@@ -61,11 +72,13 @@ aws dynamodb create-table \
 ## Deploy
 
 The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`,
-`vpc_id`, `subnet_id`, and `acm_certificate_arn` (blank to skip), then runs `terraform apply`
-and the steps below in one shot. `mongo_uri` is entered with hidden input and passed straight
-to `terraform apply -var` — it's never written to disk. The other three are non-secret and get
-saved to `terraform.tfvars` (gitignored), so the next run offers them back as defaults instead
-of asking from scratch.
+`vpc_id`, `subnet_id`, and `acm_certificate_arn` (blank to skip), then runs `terraform apply` and
+builds/pushes/deploys both the dashboard API and demo-api in one shot. `mongo_uri` is entered with
+hidden input and passed straight to `terraform apply -var` — it's never written to disk. The other
+three are non-secret and get saved to `terraform.tfvars` (gitignored), so the next run offers them
+back as defaults instead of asking from scratch. Pass positional flags to skip steps:
+`./scripts/deploy.sh <do_infra> <do_api> <do_app> <do_demo_api>` (each `true`/`false`, all default
+`true`).
 
 ```bash
 cd infra
@@ -83,37 +96,45 @@ terraform init
 terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
 ```
 
-This provisions the bucket, CloudFront distribution, ECR repo, and the ECS cluster/instance. The
-ECS service will fail to start tasks until an image actually exists in ECR — push one next:
+This provisions the bucket, CloudFront distribution, both ECR repos, and the ECS cluster/instance.
+Both ECS services will fail to start tasks until images actually exist in their ECR repos — push
+them next (same ECR login covers both repos, same registry):
 
 ```bash
-cd ../api
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$(terraform -chdir=../infra output -raw ecr_repository_url | cut -d/ -f1)"
-docker build -t "$(terraform -chdir=../infra output -raw ecr_repository_url):latest" .
-docker push "$(terraform -chdir=../infra output -raw ecr_repository_url):latest"
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$(terraform -chdir=infra output -raw ecr_repository_url | cut -d/ -f1)"
+
+cd dashboard/api
+docker build -t "$(terraform -chdir=../../infra output -raw ecr_repository_url):latest" .
+docker push "$(terraform -chdir=../../infra output -raw ecr_repository_url):latest"
+
+cd ../../demo-api
+docker build -t "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest" .
+docker push "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest"
 ```
 
-ECS will pick up the new image on the next deployment. To force it immediately:
+ECS will pick up new images on the next deployment. To force it immediately:
 
 ```bash
 aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-api --force-new-deployment --region us-east-1
+aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-demo-api --force-new-deployment --region us-east-1
 ```
 
 Then build and deploy the frontend against this deployment:
 
 ```bash
-cd ../app
+cd ../dashboard/app
 VITE_API_URL=/api npm run build
-aws s3 sync dist/ "s3://$(terraform -chdir=../infra output -raw s3_bucket_name)/app/" --delete
+aws s3 sync dist/ "s3://$(terraform -chdir=../../infra output -raw s3_bucket_name)/app/" --delete
 ```
 
 `terraform output site_url` is the URL to open.
 
-## Redeploying the API after a code change
+## Redeploying an API after a code change
 
-Rebuild and push a new image (as above), then force a new ECS deployment — no Terraform apply
-needed for a plain code change. Bump `api_image_tag` (e.g. to a git SHA) and `terraform apply` only
-if you want the exact deployed tag tracked in Terraform state.
+Rebuild and push a new image (as above), then force a new ECS deployment for that service — no
+Terraform apply needed for a plain code change. Bump `api_image_tag` or `demo_api_image_tag` (e.g.
+to a git SHA) and `terraform apply` only if you want the exact deployed tag tracked in Terraform
+state.
 
 ## Notes and caveats
 

@@ -3,8 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="$SCRIPT_DIR/.."
-API_DIR="$INFRA_DIR/../api"
-APP_DIR="$INFRA_DIR/../app"
+API_DIR="$INFRA_DIR/../dashboard/api"
+APP_DIR="$INFRA_DIR/../dashboard/app"
+DEMO_API_DIR="$INFRA_DIR/../demo-api"
 TFVARS_FILE="terraform.tfvars"
 
 info() { echo ""; echo "==> $*"; }
@@ -12,6 +13,7 @@ info() { echo ""; echo "==> $*"; }
 DO_INFRA="${1:-true}"
 DO_API="${2:-true}"
 DO_APP="${3:-true}"
+DO_DEMO_API="${4:-true}"
 
 for cmd in terraform docker aws npm; do
   command -v "$cmd" &>/dev/null || { echo "ERROR: $cmd is required but not installed."; exit 1; }
@@ -75,13 +77,17 @@ AWS_REGION=$(terraform output -raw aws_region)
 S3_BUCKET=$(terraform output -raw s3_bucket_name)
 ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
 ECS_SERVICE=$(terraform output -raw ecs_service_name)
+DEMO_API_ECR_REPO_URL=$(terraform output -raw demo_api_ecr_repository_url)
+DEMO_API_ECS_SERVICE=$(terraform output -raw demo_api_ecs_service_name)
 CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
 SITE_URL=$(terraform output -raw site_url)
 
-if [[ "$DO_API" == "true" ]]; then
+if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" ]]; then
   info "Logging in to ECR ($ECR_REGISTRY)..."
   aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+fi
 
+if [[ "$DO_API" == "true" ]]; then
   info "Building API image..."
   docker build -t "$ECR_REPO_URL:latest" "$API_DIR"
 
@@ -96,6 +102,23 @@ if [[ "$DO_API" == "true" ]]; then
     --region "$AWS_REGION" >/dev/null
 else
   info "Skipping API build/deploy (do_api=false)"
+fi
+
+if [[ "$DO_DEMO_API" == "true" ]]; then
+  info "Building demo-api image..."
+  docker build -t "$DEMO_API_ECR_REPO_URL:latest" "$DEMO_API_DIR"
+
+  info "Pushing demo-api image..."
+  docker push "$DEMO_API_ECR_REPO_URL:latest"
+
+  info "Forcing new ECS deployment ($ECS_CLUSTER/$DEMO_API_ECS_SERVICE)..."
+  aws ecs update-service \
+    --cluster "$ECS_CLUSTER" \
+    --service "$DEMO_API_ECS_SERVICE" \
+    --force-new-deployment \
+    --region "$AWS_REGION" >/dev/null
+else
+  info "Skipping demo-api build/deploy (do_demo_api=false)"
 fi
 
 if [[ "$DO_APP" == "true" ]]; then

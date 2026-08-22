@@ -30,6 +30,15 @@ output "ecs_service_name" {
   value = aws_ecs_service.api.name
 }
 
+output "demo_api_ecr_repository_url" {
+  description = "Push the demo-api image here (see README for the build/push commands)."
+  value       = aws_ecr_repository.demo_api.repository_url
+}
+
+output "demo_api_ecs_service_name" {
+  value = aws_ecs_service.demo_api.name
+}
+
 output "aws_region" {
   value = var.aws_region
 }

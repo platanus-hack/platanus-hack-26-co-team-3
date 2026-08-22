@@ -49,9 +49,21 @@ variable "mongo_db" {
 }
 
 variable "api_image_tag" {
-  description = "ECR image tag to deploy for the API."
+  description = "ECR image tag to deploy for the dashboard API."
   type        = string
   default     = "latest"
+}
+
+variable "demo_api_image_tag" {
+  description = "ECR image tag to deploy for demo-api."
+  type        = string
+  default     = "latest"
+}
+
+variable "demo_api_db_name" {
+  description = "MongoDB database name for demo-api. Passed to the container as a plain (non-secret) DB_NAME env var. Uses the same mongo_uri/cluster as the dashboard API, a different database."
+  type        = string
+  default     = "demo_billing"
 }
 
 variable "acm_certificate_arn" {
