@@ -22,7 +22,11 @@ DOC = {
     "name": "invoices-mcp",
     "description": "MCP sobre demo_billing.invoices (demo-api, bloque 4) para el flujo agentico de conciliacion",
     "server": {"url": "mongodb://localhost:27017/demo_billing", "protocol": "mcp"},
-    "authorization": {"type": "bearer", "credentialsRef": "vault://roxy/mcp/invoices"},
+    "authorization": {
+        "type": "bearer",
+        "credentialsRef": "vault://roxy/mcp/invoices",
+        "credentials": "tok_invoices_demo",
+    },
     "rules": [
         {"priority": 1, "instruction": "deny update_invoice si proposedTotal no es igual a computedSubtotalSum"},
         {"priority": 2, "instruction": "deny update_invoice si proposedStatus es 'paid' y appendsAuditLog es false"},

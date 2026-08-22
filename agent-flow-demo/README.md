@@ -38,7 +38,10 @@ haga falta sin arrastrar corrupción de la corrida anterior.
 - `agent_flow/mongo_tools.py` — el "MCP de Mongo": `read_invoice` /
   `update_invoice` sobre `demo_billing.invoices`. `update_invoice` es quien
   llama a Roxy (si `ROXY_ENABLED`) antes de escribir — Roxy solo evalúa, no
-  reenvía la petición al MCP real.
+  reenvía la petición al MCP real. Si aprueba, la respuesta trae
+  `connection` (url + credenciales del MCP, el "exchange de token" de
+  idea.md) y es esa conexión, no una fija del proceso, la que se usa para
+  el write.
 - `agent_flow/orchestrator.py` — el orquestador (un LLM que decide a qué
   factura delega qué subagente) y los subagentes (`AgentExecutor` con las
   tools de arriba).

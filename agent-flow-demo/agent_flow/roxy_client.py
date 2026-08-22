@@ -12,6 +12,7 @@ class RoxyDecision:
     reason: str
     violated_rule: Optional[Dict[str, Any]]
     log_id: Optional[str]
+    connection: Optional[Dict[str, Any]]
 
     @property
     def allowed(self) -> bool:
@@ -48,4 +49,5 @@ def evaluate(
         reason=body.get("reason", ""),
         violated_rule=body.get("violatedRule"),
         log_id=body.get("logId"),
+        connection=body.get("connection"),
     )
