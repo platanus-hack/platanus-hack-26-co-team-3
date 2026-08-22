@@ -32,6 +32,12 @@ func Load() (Config, error) {
 		AnthropicBaseURL:  strings.TrimRight(getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com"), "/"),
 		DashboardURL:      os.Getenv("DASHBOARD_URL"),
 	}
+	if port := os.Getenv("PORT"); port != "" {
+		if !strings.HasPrefix(port, ":") {
+			port = ":" + port
+		}
+		cfg.HTTPAddr = port
+	}
 	var missing []string
 	if cfg.MongoURI == "" {
 		missing = append(missing, "MONGO_URI")

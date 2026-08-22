@@ -27,6 +27,7 @@ func TestLoad(t *testing.T) {
 				"ANTHROPIC_MODEL":     "",
 				"ANTHROPIC_BASE_URL":  "",
 				"DASHBOARD_URL":       "",
+				"PORT":                "",
 			},
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, ":8080", cfg.HTTPAddr)
@@ -64,6 +65,19 @@ func TestLoad(t *testing.T) {
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, "sk-ant-test", cfg.AnthropicAPIKey)
 				require.Equal(t, "claude-sonnet-5", cfg.AnthropicModel)
+			},
+		},
+		{
+			name: "render PORT overrides HTTP_ADDR",
+			env: map[string]string{
+				"MONGO_URI":          "mongodb://localhost:27017",
+				"ANTHROPIC_API_KEY":  "sk-ant-test",
+				"OPENROUTER_API_KEY": "",
+				"HTTP_ADDR":          ":8080",
+				"PORT":               "10000",
+			},
+			check: func(t *testing.T, cfg Config) {
+				require.Equal(t, ":10000", cfg.HTTPAddr)
 			},
 		},
 		{

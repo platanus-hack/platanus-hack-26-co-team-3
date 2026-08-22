@@ -42,6 +42,15 @@ set -a && source .env && set +a
 go test ./...
 ```
 
+## Docker
+
+```bash
+docker build -t roxy-gateway .
+docker run --rm -p 8080:8080 --env-file .env -e HTTP_ADDR=:8080 roxy-gateway
+```
+
+Producción (Render + Atlas): ver [DEPLOY.md](DEPLOY.md).
+
 ## Run
 
 ```bash
