@@ -5,8 +5,8 @@ from bson.errors import InvalidId
 from fastapi import FastAPI, HTTPException, Query
 from pymongo import DESCENDING
 
-from .db import get_security_collection
-from .models import SecurityLog, SecurityStatus
+from db import get_security_collection
+from models import SecurityLog, SecurityStatus
 
 app = FastAPI(title="Roxy Dashboard API")
 

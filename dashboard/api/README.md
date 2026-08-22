@@ -4,10 +4,12 @@ Block 3 (idea.md): FastAPI API backing the dashboard.
 
 ## Run
 
+From within this directory:
+
 ```bash
 pip install -r requirements.txt
 cp .env.example .env   # edit if your Mongo isn't local
-uvicorn api.main:app --reload
+uvicorn main:app --reload
 ```
 
 Requires a MongoDB instance with database `roxy` and collection `security`
