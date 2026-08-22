@@ -131,6 +131,8 @@ def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_ru
             },
         )
         output_text = _extract_text(output["output"])
+    except mongo_tools.RoxyDenialLimit as exc:
+        output_text = f"CORTADO por limite de denegaciones de Roxy: {exc}"
     except Exception as exc:  # una hoja rota no debe tumbar toda la corrida
         output_text = f"ERROR en el subagente: {exc}"
 

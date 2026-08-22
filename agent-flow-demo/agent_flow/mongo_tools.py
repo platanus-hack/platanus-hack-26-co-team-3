@@ -15,6 +15,12 @@ def list_issued_invoices() -> List[Dict[str, Any]]:
     return list(_invoices.find({"status": "issued"}, {"_id": 1, "customer": 1, "total": 1}))
 
 
+class RoxyDenialLimit(Exception):
+    """El subagente insistio con operaciones que Roxy denego hasta pasarse
+    del tope. Corta la ejecucion de ese subagente: reintentar mas no lo va a
+    acercar a una operacion valida."""
+
+
 def _invoices_via_connection(connection: Dict[str, Any]):
     """Conecta usando la `connection` que Roxy entrega solo si aprobo (el
     exchange de token de idea.md): url + credenciales del MCP, no las
@@ -32,6 +38,7 @@ def build_tools(accessed_by: str, run_id: str):
     solo evalua y, si aprueba, devuelve `connection` (url + credenciales del
     MCP). Este tool es el que abre esa conexion y ejecuta el write.
     """
+    denials = {"count": 0}
 
     @tool
     def read_invoice(invoice_id: str) -> Dict[str, Any]:
@@ -81,6 +88,12 @@ def build_tools(accessed_by: str, run_id: str):
                 payload=payload,
             )
             if not decision.allowed:
+                denials["count"] += 1
+                if denials["count"] >= config.MAX_ROXY_DENIALS:
+                    raise RoxyDenialLimit(
+                        f"{denials['count']} operaciones denegadas por Roxy "
+                        f"sobre {invoice_id}; ultima: {decision.reason}"
+                    )
                 return f"DENEGADO por Roxy: {decision.reason}"
             auth = decision.connection["authorization"]
             invoices_handle = _invoices_via_connection(decision.connection)
