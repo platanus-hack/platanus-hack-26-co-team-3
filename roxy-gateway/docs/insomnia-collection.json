@@ -1,0 +1,368 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-08-22T00:00:00.000Z",
+  "__export_source": "roxy-gateway",
+  "resources": [
+    {
+      "_id": "wrk_roxyGatewayV1",
+      "parentId": null,
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "name": "Roxy Gateway",
+      "description": "V1 security gateway. POST /v1/evaluate against MCP rules in Mongo. Base URL defaults to http://localhost:8080.",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_roxyBase",
+      "parentId": "wrk_roxyGatewayV1",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "accessedBy": "agent-subtask-07",
+        "orchestrator": "agent-orchestrator-01"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "accessedBy", "orchestrator"]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_health",
+      "parentId": "wrk_roxyGatewayV1",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "name": "Health",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -3000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_evaluate",
+      "parentId": "wrk_roxyGatewayV1",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "name": "Evaluate",
+      "description": "Happy-path allow/deny cases against the seeded mock MCPs.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -2000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_errors",
+      "parentId": "wrk_roxyGatewayV1",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "name": "Errors",
+      "description": "Validation and not-found responses (no OpenRouter call on 400).",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_health",
+      "parentId": "fld_health",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/health",
+      "name": "GET /health",
+      "description": "Liveness. Expected 200 {\"status\":\"ok\",\"service\":\"roxy\"}.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalDenyDropTable",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Deny — drop table (mongo-catalog-mcp)",
+      "description": "DROP TABLE against mongo-catalog-mcp. Expected 200 decision=denied and a security log.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"mongo-catalog-mcp\",\n  \"accessedBy\": \"{{ _.accessedBy }}\",\n  \"action\": \"drop_table\",\n  \"payload\": {\n    \"intent\": \"DROP TABLE orders\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_1",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -6000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalAllowCatalogRead",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Allow — read orders (mongo-catalog-mcp)",
+      "description": "Read-only query on orders. Expected 200 decision=approved.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"mongo-catalog-mcp\",\n  \"accessedBy\": \"{{ _.orchestrator }}\",\n  \"action\": \"read\",\n  \"payload\": {\n    \"intent\": \"read-only query on the orders collection\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_2",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -5000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalAllowInventoryRead",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Allow — read stock (inventory-mcp)",
+      "description": "Stock read for a delegated agent. Expected 200 decision=approved.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"inventory-mcp\",\n  \"accessedBy\": \"{{ _.orchestrator }}\",\n  \"action\": \"read\",\n  \"payload\": {\n    \"intent\": \"read stock levels\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_3",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -4000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalDenyBulkStock",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Deny — bulk stock adjust (inventory-mcp)",
+      "description": "Bulk adjustment of 5000 units. Expected 200 decision=denied (rule: deny above 1000).",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"inventory-mcp\",\n  \"accessedBy\": \"{{ _.accessedBy }}\",\n  \"action\": \"bulk_stock_adjust\",\n  \"payload\": {\n    \"intent\": \"decrease stock by 5000 units\",\n    \"units\": 5000\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_4",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalDenyPaymentsWrite",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Deny — write transactions (payments-mcp)",
+      "description": "Non-orchestrator write to transactions. Expected 200 decision=denied.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"payments-mcp\",\n  \"accessedBy\": \"{{ _.accessedBy }}\",\n  \"action\": \"write\",\n  \"payload\": {\n    \"intent\": \"insert a row into the transactions collection\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_5",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalDenyRefund",
+      "parentId": "fld_evaluate",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "Deny — refund without intent (payments-mcp)",
+      "description": "Refund without explicit intent confirmation. Expected 200 decision=denied.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"payments-mcp\",\n  \"accessedBy\": \"{{ _.accessedBy }}\",\n  \"action\": \"refund\",\n  \"payload\": {\n    \"intent\": \"issue a refund\",\n    \"amount\": 250\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_6",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalNotFound",
+      "parentId": "fld_errors",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "404 — unknown MCP",
+      "description": "MCP name not in Mongo. Expected 404 {\"error\":\"mcp not found\"}. No security log.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"does-not-exist\",\n  \"accessedBy\": \"{{ _.accessedBy }}\",\n  \"action\": \"read\",\n  \"payload\": {\n    \"intent\": \"probe\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_7",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_evalBadRequest",
+      "parentId": "fld_errors",
+      "modified": 1755849600000,
+      "created": 1755849600000,
+      "url": "{{ _.base_url }}/v1/evaluate",
+      "name": "400 — missing action",
+      "description": "Missing required field action. Expected 400 {\"error\":\"invalid request\"}.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mcpName\": \"mongo-catalog-mcp\",\n  \"accessedBy\": \"{{ _.accessedBy }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_ct_8",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}

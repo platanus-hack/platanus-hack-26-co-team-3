@@ -19,10 +19,13 @@ func TestLoad(t *testing.T) {
 			env: map[string]string{
 				"MONGO_URI":           "mongodb://localhost:27017",
 				"OPENROUTER_API_KEY":  "sk-test",
+				"ANTHROPIC_API_KEY":   "",
 				"HTTP_ADDR":           "",
 				"MONGO_DB_NAME":       "",
 				"OPENROUTER_MODEL":    "",
 				"OPENROUTER_BASE_URL": "",
+				"ANTHROPIC_MODEL":     "",
+				"ANTHROPIC_BASE_URL":  "",
 				"DASHBOARD_URL":       "",
 			},
 			check: func(t *testing.T, cfg Config) {
@@ -43,12 +46,25 @@ func TestLoad(t *testing.T) {
 			wantErr: "MONGO_URI",
 		},
 		{
-			name: "missing openrouter key",
+			name: "missing llm key",
 			env: map[string]string{
 				"MONGO_URI":          "mongodb://localhost:27017",
 				"OPENROUTER_API_KEY": "",
+				"ANTHROPIC_API_KEY":  "",
 			},
-			wantErr: "OPENROUTER_API_KEY",
+			wantErr: "ANTHROPIC_API_KEY or OPENROUTER_API_KEY",
+		},
+		{
+			name: "anthropic key is enough",
+			env: map[string]string{
+				"MONGO_URI":          "mongodb://localhost:27017",
+				"OPENROUTER_API_KEY": "",
+				"ANTHROPIC_API_KEY":  "sk-ant-test",
+			},
+			check: func(t *testing.T, cfg Config) {
+				require.Equal(t, "sk-ant-test", cfg.AnthropicAPIKey)
+				require.Equal(t, "claude-sonnet-5", cfg.AnthropicModel)
+			},
 		},
 		{
 			name: "trims openrouter base url",
