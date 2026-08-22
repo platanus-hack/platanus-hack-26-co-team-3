@@ -1,5 +1,6 @@
-vpc_id    = "vpc-xxxxxxxx"
-subnet_id = "subnet-xxxxxxxx"
+vpc_id        = "vpc-xxxxxxxx"
+subnet_id     = "subnet-xxxxxxxx"
+evaluator_url = "https://your-evaluator-host/evaluate" # block 10 "verifier"; roxy-gateway requires this
 
 # acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx"
 # domain_aliases      = ["roxygt.lat", "www.roxygt.lat"]  # needs acm_certificate_arn set too

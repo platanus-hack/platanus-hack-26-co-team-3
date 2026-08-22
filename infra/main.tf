@@ -67,6 +67,14 @@ resource "aws_cloudfront_function" "strip_api_prefix" {
   code    = file("${path.module}/templates/strip_api_prefix.js")
 }
 
+resource "aws_cloudfront_function" "strip_gateway_prefix" {
+  name    = "${var.project_name}-strip-gateway-prefix"
+  runtime = "cloudfront-js-1.0"
+  comment = "Rewrites /gateway/* to /* before forwarding to the roxy-gateway origin"
+  publish = true
+  code    = file("${path.module}/templates/strip_gateway_prefix.js")
+}
+
 resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -88,6 +96,18 @@ resource "aws_cloudfront_distribution" "app" {
 
     custom_origin_config {
       http_port              = 8000
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
+    domain_name = aws_eip.api.public_dns
+    origin_id   = "ec2-roxy-gateway"
+
+    custom_origin_config {
+      http_port              = 8002
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
@@ -116,6 +136,22 @@ resource "aws_cloudfront_distribution" "app" {
     function_association {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.strip_api_prefix.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/gateway/*"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "ec2-roxy-gateway"
+    viewer_protocol_policy   = "redirect-to-https"
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    compress                 = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_gateway_prefix.arn
     }
   }
 
@@ -174,15 +210,16 @@ resource "aws_security_group" "api" {
     }
   }
 
-  # Dashboard API (8000) and demo-api (8001) as one contiguous port-range rule, not two
-  # separate rules. A rule referencing a managed prefix list counts against the security
-  # group's rule quota once PER ENTRY IN THE LIST (not once per rule) — the CloudFront
-  # origin-facing list has 50-60+ CIDRs, so two separate references to it blew past the
-  # default 60-rules-per-security-group quota. One reference fits comfortably.
+  # Dashboard API (8000), demo-api (8001), and roxy-gateway (8002) as one contiguous
+  # port-range rule, not three separate rules. A rule referencing a managed prefix list
+  # counts against the security group's rule quota once PER ENTRY IN THE LIST (not once
+  # per rule) — the CloudFront origin-facing list has 50-60+ CIDRs, so separate references
+  # to it blow past the default 60-rules-per-security-group quota fast. One reference fits
+  # comfortably; keep any future service on this instance on the next contiguous port too.
   ingress {
-    description     = "Dashboard API + demo-api, only from CloudFront IP ranges"
+    description     = "Dashboard API + demo-api + roxy-gateway, only from CloudFront IP ranges"
     from_port       = 8000
-    to_port         = 8001
+    to_port         = 8002
     protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
   }
@@ -384,6 +421,70 @@ resource "aws_ecs_service" "demo_api" {
   name            = "${var.project_name}-demo-api"
   cluster         = aws_ecs_cluster.api.id
   task_definition = aws_ecs_task_definition.demo_api.arn
+  desired_count   = 1
+  launch_type     = "EC2"
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+}
+
+# roxy-gateway (block 2): a third ECS service on the same EC2 instance/cluster, on its
+# own port (8002) and ECR repo, sharing the instance's IAM role and the mongo_uri secret
+# (same Mongo cluster/database as the dashboard API — roxy-gateway writes what the
+# dashboard reads). Also needs evaluator_url: the URL of the policy/verification service
+# it calls per request (block 10, "verifier" — not yet deployed by this Terraform).
+resource "aws_ecr_repository" "roxy_gateway" {
+  name                 = "${var.project_name}-roxy-gateway"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_cloudwatch_log_group" "roxy_gateway" {
+  name              = "/ecs/${var.project_name}-roxy-gateway"
+  retention_in_days = 3
+}
+
+resource "aws_ecs_task_definition" "roxy_gateway" {
+  family             = "${var.project_name}-roxy-gateway"
+  network_mode       = "host"
+  task_role_arn      = aws_iam_role.api.arn
+  execution_role_arn = aws_iam_role.api.arn
+
+  container_definitions = jsonencode([{
+    name              = "roxy-gateway"
+    image             = "${aws_ecr_repository.roxy_gateway.repository_url}:${var.roxy_gateway_image_tag}"
+    essential         = true
+    memory            = 250
+    memoryReservation = 100
+    portMappings = [{
+      containerPort = 8002
+      hostPort      = 8002
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "PORT", value = "8002" },
+      { name = "MONGO_DB_NAME", value = var.mongo_db },
+      { name = "EVALUATOR_URL", value = var.evaluator_url },
+      { name = "MONGO_URI", value = var.mongo_uri },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.roxy_gateway.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+  }])
+}
+
+resource "aws_ecs_service" "roxy_gateway" {
+  name            = "${var.project_name}-roxy-gateway"
+  cluster         = aws_ecs_cluster.api.id
+  task_definition = aws_ecs_task_definition.roxy_gateway.arn
   desired_count   = 1
   launch_type     = "EC2"
 

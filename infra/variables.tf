@@ -66,6 +66,17 @@ variable "demo_api_db_name" {
   default     = "demo_billing"
 }
 
+variable "roxy_gateway_image_tag" {
+  description = "ECR image tag to deploy for roxy-gateway."
+  type        = string
+  default     = "latest"
+}
+
+variable "evaluator_url" {
+  description = "URL of the policy/verification service roxy-gateway calls per request to evaluate context against rules (block 10, \"verifier\"). Required by roxy-gateway's own config — it refuses to start without it."
+  type        = string
+}
+
 variable "acm_certificate_arn" {
   type    = string
   default = null

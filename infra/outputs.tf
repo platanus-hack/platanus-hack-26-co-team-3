@@ -39,6 +39,20 @@ output "demo_api_ecs_service_name" {
   value = aws_ecs_service.demo_api.name
 }
 
+output "roxy_gateway_ecr_repository_url" {
+  description = "Push the roxy-gateway image here (see README for the build/push commands)."
+  value       = aws_ecr_repository.roxy_gateway.repository_url
+}
+
+output "roxy_gateway_ecs_service_name" {
+  value = aws_ecs_service.roxy_gateway.name
+}
+
+output "roxy_gateway_base_url" {
+  description = "Path roxy-gateway is served under through CloudFront (e.g. https://<site_url>/gateway/v1/evaluate)."
+  value       = "/gateway"
+}
+
 output "aws_region" {
   value = var.aws_region
 }

@@ -6,6 +6,7 @@ INFRA_DIR="$SCRIPT_DIR/.."
 API_DIR="$INFRA_DIR/../dashboard/api"
 APP_DIR="$INFRA_DIR/../dashboard/app"
 DEMO_API_DIR="$INFRA_DIR/../demo-api"
+ROXY_GATEWAY_DIR="$INFRA_DIR/../roxy-gateway"
 TFVARS_FILE="terraform.tfvars"
 
 info() { echo ""; echo "==> $*"; }
@@ -14,6 +15,7 @@ DO_INFRA="${1:-true}"
 DO_API="${2:-true}"
 DO_APP="${3:-true}"
 DO_DEMO_API="${4:-true}"
+DO_ROXY_GATEWAY="${5:-true}"
 
 for cmd in terraform docker aws npm; do
   command -v "$cmd" &>/dev/null || { echo "ERROR: $cmd is required but not installed."; exit 1; }
@@ -28,11 +30,13 @@ EXISTING_VPC_ID=""
 EXISTING_SUBNET_ID=""
 EXISTING_ACM_ARN=""
 EXISTING_DOMAIN_ALIASES=""
+EXISTING_EVALUATOR_URL=""
 if [[ -f "$TFVARS_FILE" ]]; then
   EXISTING_VPC_ID=$(sed -n -E 's/^vpc_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_SUBNET_ID=$(sed -n -E 's/^subnet_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_ACM_ARN=$(sed -n -E 's/^acm_certificate_arn *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_DOMAIN_ALIASES=$(sed -n -E 's/^domain_aliases *= *\[(.*)\]$/\1/p' "$TFVARS_FILE" | sed -E 's/"//g; s/, */,/g')
+  EXISTING_EVALUATOR_URL=$(sed -n -E 's/^evaluator_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
 fi
 
 info "Configuration"
@@ -72,10 +76,18 @@ if [[ -z "$DOMAIN_ALIASES" ]]; then
   DOMAIN_ALIASES="${DOMAIN_ALIASES:-$EXISTING_DOMAIN_ALIASES}"
 fi
 
+EVALUATOR_URL="${EVALUATOR_URL:-}"
+if [[ -z "$EVALUATOR_URL" ]]; then
+  read -r -p "Evaluator URL (evaluator_url, roxy-gateway's policy/verification service)${EXISTING_EVALUATOR_URL:+ [$EXISTING_EVALUATOR_URL]}: " EVALUATOR_URL
+  EVALUATOR_URL="${EVALUATOR_URL:-$EXISTING_EVALUATOR_URL}"
+fi
+[[ -n "$EVALUATOR_URL" ]] || { echo "ERROR: evaluator_url is required (roxy-gateway refuses to start without it)."; exit 1; }
+
 info "Writing $TFVARS_FILE..."
 {
   echo "vpc_id = \"$VPC_ID\""
   echo "subnet_id = \"$SUBNET_ID\""
+  echo "evaluator_url = \"$EVALUATOR_URL\""
   if [[ -n "$ACM_CERTIFICATE_ARN" ]]; then
     echo "acm_certificate_arn = \"$ACM_CERTIFICATE_ARN\""
   fi
@@ -123,10 +135,12 @@ ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
 ECS_SERVICE=$(terraform output -raw ecs_service_name)
 DEMO_API_ECR_REPO_URL=$(terraform output -raw demo_api_ecr_repository_url)
 DEMO_API_ECS_SERVICE=$(terraform output -raw demo_api_ecs_service_name)
+ROXY_GATEWAY_ECR_REPO_URL=$(terraform output -raw roxy_gateway_ecr_repository_url)
+ROXY_GATEWAY_ECS_SERVICE=$(terraform output -raw roxy_gateway_ecs_service_name)
 CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
 SITE_URL=$(terraform output -raw site_url)
 
-if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" ]]; then
+if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" || "$DO_ROXY_GATEWAY" == "true" ]]; then
   info "Logging in to ECR ($ECR_REGISTRY)..."
   aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 fi
@@ -160,6 +174,20 @@ if [[ "$DO_DEMO_API" == "true" ]]; then
     --region "$AWS_REGION" >/dev/null
 else
   info "Skipping demo-api build/deploy (do_demo_api=false)"
+fi
+
+if [[ "$DO_ROXY_GATEWAY" == "true" ]]; then
+  info "Building and pushing roxy-gateway image (linux/amd64)..."
+  docker buildx build --platform linux/amd64 -t "$ROXY_GATEWAY_ECR_REPO_URL:latest" --push "$ROXY_GATEWAY_DIR"
+
+  info "Forcing new ECS deployment ($ECS_CLUSTER/$ROXY_GATEWAY_ECS_SERVICE)..."
+  aws ecs update-service \
+    --cluster "$ECS_CLUSTER" \
+    --service "$ROXY_GATEWAY_ECS_SERVICE" \
+    --force-new-deployment \
+    --region "$AWS_REGION" >/dev/null
+else
+  info "Skipping roxy-gateway build/deploy (do_roxy_gateway=false)"
 fi
 
 if [[ "$DO_APP" == "true" ]]; then

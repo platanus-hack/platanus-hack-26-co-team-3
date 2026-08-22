@@ -1,42 +1,54 @@
 # infra
 
-Terraform for deploying `dashboard/api` (FastAPI backend), `dashboard/app` (React frontend), and
-`demo-api` (block 4's demo billing API) to AWS, within the AWS Free Tier for a low-traffic project.
+Terraform for deploying `dashboard/api` (FastAPI backend), `dashboard/app` (React frontend),
+`demo-api` (block 4's demo billing API), and `roxy-gateway` (block 2) to AWS, within the AWS Free
+Tier for a low-traffic project.
 
 ## What this creates
 
 - **S3 bucket** (named `var.project_name`) — hosts the built frontend (`app/dist`) under the
   `app/` prefix, private, only reachable through CloudFront.
 - **CloudFront distribution** — one HTTPS domain for everything. `/*` → S3 (frontend), `/api/*` →
-  the EC2 instance (dashboard backend). Routing both through the same domain avoids CORS and avoids
-  the browser blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS
-  certificate. demo-api isn't routed through CloudFront (see below).
+  the dashboard API, `/gateway/*` → roxy-gateway (both on the EC2 instance). Routing everything
+  through the same domain avoids CORS and avoids the browser blocking mixed HTTP/HTTPS content,
+  since the EC2 instance itself has no TLS certificate. Each behavior has its own CloudFront
+  Function that strips its path prefix before forwarding to the origin (`strip_api_prefix.js`,
+  `strip_gateway_prefix.js`) — so `/gateway/v1/evaluate` reaches roxy-gateway as `/v1/evaluate`.
+  demo-api isn't routed through CloudFront (see below).
 - **CloudFront Origin Access Control (OAC)** — used only on the S3 origin. The bucket policy grants
   `s3:GetObject` on `app/*` to `cloudfront.amazonaws.com`, scoped by an `AWS:SourceArn` condition to
   this specific distribution, so nothing else (not even other CloudFront distributions) can read
   the bucket.
-- **ECS cluster running on a single EC2 instance** (`t3a.micro`) — **two** ECS services share this
+- **ECS cluster running on a single EC2 instance** (`t3a.micro`) — **three** ECS services share this
   one instance/cluster, each an EC2-launch-type task with host networking (a hand-installed process
   each, essentially, but ECS-managed):
   - **dashboard API** — port 8000, its own ECR repo, connects to the `roxy` database.
   - **demo-api** — port 8001, its own ECR repo, connects to the `demo_billing` database (same
     `mongo_uri`/cluster, different database — see `demo_api_db_name`).
+  - **roxy-gateway** — port 8002, its own ECR repo, connects to the same `roxy` database as the
+    dashboard API (it writes what the dashboard reads). Also needs `evaluator_url`: the URL of the
+    policy/verification service it calls per request (block 10, "verifier" — not deployed by this
+    Terraform; point it at wherever that service actually runs).
 
-  Both ports only accept traffic from CloudFront's IP ranges (the security group), but only the
-  dashboard API is actually wired into the CloudFront distribution's `/api/*` behavior — demo-api's
-  port is open the same way but has no CloudFront origin routing to it yet. Add one (mirroring the
-  existing `ec2-api` origin/behavior, on port 8001) if you want it served through the CDN too.
-  Because both tasks share one `t3a.micro` (1GiB RAM total, split ~700MB/300MB across the two
-  containers' hard memory limits), this is tight — watch for OOM kills under concurrent load and
-  size up the instance if that happens.
+  All three ports only accept traffic from CloudFront's IP ranges (the security group, one rule
+  covering 8000-8002). The dashboard API and roxy-gateway are both wired into the CloudFront
+  distribution (`/api/*` and `/gateway/*`); demo-api's port is open the same way but has no
+  CloudFront origin routing to it yet — add one (mirroring the `ec2-roxy-gateway` origin/behavior)
+  if you want it served through the CDN too.
+
+  **Memory is genuinely tight now.** Three tasks share one `t3a.micro` (1GiB RAM total): hard
+  memory limits are 700MB + 300MB + 250MB = 1250MB, already over the instance's physical RAM before
+  any OS/Docker/ECS-agent overhead. If concurrent load ever pushes real usage anywhere close to
+  those limits, expect OOM kills. Size up `instance_type` before that happens rather than after.
 
 ## Prerequisites
 
 - Terraform >= 1.5
-- Docker, for building the API images
+- Docker, for building the images
 - AWS credentials configured (`aws configure`, or env vars) with permission to create the resources above
-- A MongoDB connection string reachable from the EC2 instance (Atlas, or your own), with both a
-  `roxy` and a `demo_billing` database
+- A MongoDB connection string reachable from the EC2 instance (Atlas, or your own), with `roxy` and
+  `demo_billing` databases
+- A reachable URL for `evaluator_url` (roxy-gateway refuses to start without one)
 
 ## Remote state (one-time bootstrap)
 
@@ -72,15 +84,15 @@ aws dynamodb create-table \
 ## Deploy
 
 The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`, `vpc_id`,
-`subnet_id`, `acm_certificate_arn`, and `domain_aliases` (the last two blank to skip), then runs
-`terraform apply` and builds/pushes/deploys both the dashboard API and demo-api in one shot.
-`mongo_uri` is entered with hidden input and passed straight to `terraform apply -var` — it's never
-written to disk. The other four are non-secret and get saved to `terraform.tfvars` (gitignored), so
-the next run offers them back as defaults instead of asking from scratch. Any of the five can also
-come from the environment instead of a prompt (see `./scripts/deploy-from-env.sh` below) — whichever
-are already set are used as-is, only what's missing gets prompted for. Pass positional flags to skip
-steps: `./scripts/deploy.sh <do_infra> <do_api> <do_app> <do_demo_api>` (each `true`/`false`, all
-default `true`).
+`subnet_id`, `evaluator_url`, `acm_certificate_arn`, and `domain_aliases` (the last two blank to
+skip), then runs `terraform apply` and builds/pushes/deploys the dashboard API, demo-api, and
+roxy-gateway in one shot. `mongo_uri` is entered with hidden input and passed straight to
+`terraform apply -var` — it's never written to disk. The other five are non-secret and get saved to
+`terraform.tfvars` (gitignored), so the next run offers them back as defaults instead of asking from
+scratch. Any of the six can also come from the environment instead of a prompt (see
+`./scripts/deploy-from-env.sh` below) — whichever are already set are used as-is, only what's
+missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh <do_infra>
+<do_api> <do_app> <do_demo_api> <do_roxy_gateway>` (each `true`/`false`, all default `true`).
 
 ```bash
 cd infra
@@ -88,13 +100,14 @@ cd infra
 ```
 
 For a non-interactive run (CI, or just avoiding retyping things), `./scripts/deploy-from-env.sh`
-reads `mongo_uri`/`vpc_id`/`subnet_id`/`acm_certificate_arn`/`domain_aliases` from an `.env` file
-and exports them, so `deploy.sh` finds them already set and skips every prompt. `mongo_uri`,
-`vpc_id`, and `subnet_id` are required in `.env`; the other two stay optional:
+reads `mongo_uri`/`vpc_id`/`subnet_id`/`evaluator_url`/`acm_certificate_arn`/`domain_aliases` from
+an `.env` file and exports them, so `deploy.sh` finds them already set and skips every prompt.
+`mongo_uri`, `vpc_id`, `subnet_id`, and `evaluator_url` are required in `.env`; the other two stay
+optional:
 
 ```bash
 cd infra
-cp .env.example .env   # fill in MONGO_URI, VPC_ID, SUBNET_ID (others optional)
+cp .env.example .env   # fill in MONGO_URI, VPC_ID, SUBNET_ID, EVALUATOR_URL (others optional)
 ./scripts/deploy-from-env.sh
 ```
 
@@ -103,17 +116,17 @@ To run Terraform yourself instead:
 ```bash
 cd infra
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars: set vpc_id, subnet_id (and optionally acm_certificate_arn, domain_aliases)
+# edit terraform.tfvars: set vpc_id, subnet_id, evaluator_url (and optionally acm_certificate_arn, domain_aliases)
 
 terraform init
 terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
 ```
 
-This provisions the bucket, CloudFront distribution, both ECR repos, and the ECS cluster/instance.
-Both ECS services will fail to start tasks until images actually exist in their ECR repos — push
-them next (same ECR login covers both repos, same registry). **Build with `--platform linux/amd64`
-explicitly** — the EC2 instance (`t3a.micro`) is x86_64, and building without a platform flag on an
-Apple Silicon Mac produces an arm64-only image that ECS can't pull
+This provisions the bucket, CloudFront distribution, all three ECR repos, and the ECS
+cluster/instance. All three ECS services will fail to start tasks until images actually exist in
+their ECR repos — push them next (same ECR login covers all repos, same registry). **Build with
+`--platform linux/amd64` explicitly** — the EC2 instance (`t3a.micro`) is x86_64, and building
+without a platform flag on an Apple Silicon Mac produces an arm64-only image that ECS can't pull
 (`CannotPullContainerError: no matching manifest for linux/amd64`):
 
 ```bash
@@ -124,6 +137,9 @@ docker buildx build --platform linux/amd64 -t "$(terraform -chdir=../../infra ou
 
 cd ../../demo-api
 docker buildx build --platform linux/amd64 -t "$(terraform -chdir=../infra output -raw demo_api_ecr_repository_url):latest" --push .
+
+cd ../roxy-gateway
+docker buildx build --platform linux/amd64 -t "$(terraform -chdir=../infra output -raw roxy_gateway_ecr_repository_url):latest" --push .
 ```
 
 ECS will pick up new images on the next deployment. To force it immediately:
@@ -131,6 +147,7 @@ ECS will pick up new images on the next deployment. To force it immediately:
 ```bash
 aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-api --force-new-deployment --region us-east-1
 aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-demo-api --force-new-deployment --region us-east-1
+aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-roxy-gateway --force-new-deployment --region us-east-1
 ```
 
 Then build and deploy the frontend against this deployment:
@@ -146,9 +163,9 @@ aws s3 sync dist/ "s3://$(terraform -chdir=../../infra output -raw s3_bucket_nam
 ## Redeploying an API after a code change
 
 Rebuild and push a new image (as above), then force a new ECS deployment for that service — no
-Terraform apply needed for a plain code change. Bump `api_image_tag` or `demo_api_image_tag` (e.g.
-to a git SHA) and `terraform apply` only if you want the exact deployed tag tracked in Terraform
-state.
+Terraform apply needed for a plain code change. Bump `api_image_tag`, `demo_api_image_tag`, or
+`roxy_gateway_image_tag` (e.g. to a git SHA) and `terraform apply` only if you want the exact
+deployed tag tracked in Terraform state.
 
 ## Notes and caveats
 
@@ -171,9 +188,12 @@ state.
   negligible either way; CloudWatch Logs, SSM (standard parameters), and CloudFront (1TB / 10M
   requests per month, no 12-month expiry — it's part of AWS's perpetual "Always Free" tier) round to
   $0 at this traffic level.
-- **Secrets**: `mongo_uri` is stored in SSM Parameter Store (`SecureString`, free) and injected
-  directly into the container as an env var by ECS at task start (task definition `secrets`) —
-  never baked into the image or written to disk on the instance. It still lands in Terraform state
+- **Secrets**: `mongo_uri` is stored in SSM Parameter Store (`SecureString`, free) and injected into
+  the dashboard API and demo-api containers via the task definition's `secrets` field, so the
+  plaintext value never sits in their task definitions — only in SSM, access-controlled separately.
+  roxy-gateway's container gets `mongo_uri` as a plain `environment` value instead (by request) —
+  simpler, but that means the plaintext value sits in every revision of that one task definition,
+  visible to anyone with `ecs:DescribeTaskDefinition`. Either way it still lands in Terraform state
   in plaintext, as with any Terraform-managed secret; the state bucket is encrypted and not
   publicly accessible, but anyone with read access to it can read this value — scope IAM access to
   that bucket accordingly.
