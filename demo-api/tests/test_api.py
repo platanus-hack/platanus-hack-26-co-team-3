@@ -4,7 +4,7 @@ from app.db import get_invoices_collection
 def test_list_invoices_returns_seed(client):
     res = client.get("/invoices")
     assert res.status_code == 200
-    assert len(res.json()) == 12
+    assert len(res.json()) == 30
 
 
 def test_get_invoice_by_id(client):
@@ -23,7 +23,7 @@ def test_health_consistency_green_on_clean_seed(client):
     assert res.status_code == 200
     body = res.json()
     assert body["consistent"] is True
-    assert body["checked"] == 12
+    assert body["checked"] == 30
     assert body["violations"] == []
 
 
@@ -46,7 +46,7 @@ def test_admin_reset_restores_consistency(client):
 
     res = client.post("/admin/reset")
     assert res.status_code == 200
-    assert res.json() == {"reset": True, "count": 12}
+    assert res.json() == {"reset": True, "count": 30}
 
     res = client.get("/health/consistency")
     assert res.status_code == 200
@@ -56,4 +56,4 @@ def test_admin_reset_restores_consistency(client):
 def test_admin_reset_is_idempotent(client):
     first = client.post("/admin/reset").json()
     second = client.post("/admin/reset").json()
-    assert first == second == {"reset": True, "count": 12}
+    assert first == second == {"reset": True, "count": 30}

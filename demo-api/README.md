@@ -57,14 +57,14 @@ esta imagen es el único contrato: build, y correr con esas dos env vars.
 
 ```json
 // 200
-{ "consistent": true, "checked": 12, "violations": [] }
+{ "consistent": true, "checked": 30, "violations": [] }
 ```
 
 ```json
 // 409
 {
   "consistent": false,
-  "checked": 12,
+  "checked": 30,
   "violations": [
     {
       "invoice_id": "INV-1042",
@@ -109,5 +109,10 @@ corrompidos por la corrida anterior.
   shape (`invoice_id`, `rule`, `expected`, `found`, `detail`), con
   `expected`/`found` como strings descriptivos cuando el chequeo no es
   numérico (caso `missing_audit_log`).
-- Seed de 12 facturas con mezcla 4 `draft` / 4 `issued` / 4 `paid`, IDs
-  `INV-1001`..`INV-1012`, montos en COP como enteros (sin decimales).
+- Seed de 30 facturas con mezcla 10 `draft` / 10 `issued` / 10 `paid`, IDs
+  `INV-1001`..`INV-1030`, montos en COP como enteros (sin decimales). Las
+  primeras 12 (`INV-1001`..`INV-1012`) son las originales del bloque; las
+  18 restantes (`INV-1013`..`INV-1030`) se generaron a partir de un
+  catálogo fijo de 15 SKUs con precio unitario constante, para que el
+  dataset se sienta como el catálogo real de una empresa en vez de precios
+  inventados por factura.

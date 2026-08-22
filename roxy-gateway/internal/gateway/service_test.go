@@ -63,6 +63,17 @@ func (f *fakeNotifier) Notify(_ context.Context, n dashboard.Notification) error
 	return f.err
 }
 
+type fakeCaller struct {
+	up    Upstream
+	err   error
+	calls int
+}
+
+func (f *fakeCaller) Invoke(context.Context, *mcp.MCP, string, []byte) (Upstream, error) {
+	f.calls++
+	return f.up, f.err
+}
+
 func catalogMCP() *mcp.MCP {
 	return &mcp.MCP{
 		ID:   primitive.NewObjectID(),
@@ -153,7 +164,8 @@ func TestService_Evaluate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logs := &fakeLogs{}
 			notes := &fakeNotifier{err: tt.notifyErr}
-			svc := New(tt.finder, logs, tt.eval, notes)
+			caller := &fakeCaller{up: Upstream{StatusCode: 200, Body: []byte(`{"ok":true}`)}}
+			svc := New(tt.finder, logs, tt.eval, notes, caller)
 			svc.now = func() time.Time { return fixed }
 
 			got, err := svc.Evaluate(context.Background(), EvaluateRequest{
@@ -177,11 +189,14 @@ func TestService_Evaluate(t *testing.T) {
 			require.Len(t, notes.calls, tt.wantNotes)
 			require.Equal(t, tt.wantStatus, notes.calls[0].Status)
 			if tt.wantDec == "approved" {
-				require.NotNil(t, got.Connection)
-				require.Equal(t, "https://mcp.internal/mongo-catalog", got.Connection.URL)
-				require.Equal(t, "tok_catalog_demo", got.Connection.Authorization.Credentials)
+				require.True(t, got.Allowed)
+				require.Equal(t, 1, caller.calls)
+				require.NotNil(t, got.Upstream)
+				require.JSONEq(t, `{"ok":true}`, string(got.Upstream.Body))
 			} else {
-				require.Nil(t, got.Connection)
+				require.False(t, got.Allowed)
+				require.Equal(t, 0, caller.calls)
+				require.Nil(t, got.Upstream)
 			}
 			if tt.wantRule {
 				require.NotNil(t, got.ViolatedRule)
