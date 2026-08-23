@@ -44,10 +44,26 @@ func main() {
 
 	inserted := 0
 	for _, doc := range docs {
+		update := bson.M{"$setOnInsert": doc}
+		if doc.Name == "mongo-catalog-mcp" {
+			update = bson.M{
+				"$setOnInsert": bson.M{
+					"name":        doc.Name,
+					"description": doc.Description,
+					"createdAt":   doc.CreatedAt,
+				},
+				"$set": bson.M{
+					"server":        doc.Server,
+					"authorization": doc.Authorization,
+					"rules":         doc.Rules,
+					"updatedAt":     doc.UpdatedAt,
+				},
+			}
+		}
 		res, err := col.UpdateOne(
 			ctx,
 			bson.M{"name": doc.Name},
-			bson.M{"$setOnInsert": doc},
+			update,
 			options.Update().SetUpsert(true),
 		)
 		if err != nil {
@@ -57,7 +73,7 @@ func main() {
 			inserted++
 		}
 	}
-	log.Printf("seed complete: %d new MCP docs (existing names left unchanged)", inserted)
+	log.Printf("seed complete: %d new MCP docs (mongo-catalog-mcp.server.url retargeted to https://roxygt.lat/mcp)", inserted)
 }
 
 func mockMCPs(now time.Time) []mcp.MCP {
@@ -65,15 +81,14 @@ func mockMCPs(now time.Time) []mcp.MCP {
 		{
 			Name:        "mongo-catalog-mcp",
 			Description: "MCP exposing read/write access to the product catalog database",
-			Server:      mcp.Server{URL: "https://mcp.internal/mongo-catalog", Protocol: "mcp"},
+			Server:      mcp.Server{URL: "https://roxygt.lat/mcp", Protocol: "mcp"},
 			Authorization: mcp.Authorization{
 				Type:           "bearer",
 				CredentialsRef: "vault://roxy/mcp/mongo-catalog",
-				Credentials:    "tok_catalog_demo",
 			},
 			Rules: []mcp.Rule{
-				{Priority: 1, Instruction: "deny any write operation outside working hours"},
-				{Priority: 2, Instruction: "allow read-only queries on the 'orders' collection"},
+				{Priority: 1, Instruction: "deny any write, delete, drop or update operation"},
+				{Priority: 2, Instruction: "allow read-only queries on demo_billing.invoices"},
 			},
 			CreatedAt: now,
 			UpdatedAt: now,

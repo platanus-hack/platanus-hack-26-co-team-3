@@ -51,7 +51,7 @@
       "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Evaluate",
-      "description": "Allow/deny vía evaluator. Deny = 403 vacío. Allow = body crudo del MCP, o 502 si server.url no resuelve (mock mcp.internal).",
+      "description": "Allow/deny vía evaluator. Deny = 403 vacío. Allow = body crudo del MCP (mongo-catalog-mcp → https://roxygt.lat/mcp), o 502 si el MCP no está montado.",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -2000,
@@ -133,7 +133,7 @@
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Allow — read orders (mongo-catalog-mcp)",
-      "description": "Read-only on orders. Evaluator allowed=true. Roxy POST a server.url con Bearer. Expected body crudo del MCP, o 502 mientras url sea mcp.internal.",
+      "description": "Read-only on orders. Evaluator allowed=true. Roxy POST a https://roxygt.lat/mcp con Bearer. Expected body crudo del MCP, o 502 si aún no está montado.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",

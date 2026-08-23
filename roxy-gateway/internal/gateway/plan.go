@@ -12,17 +12,19 @@ import (
 )
 
 type PlannedCall struct {
-	Method string
-	URL    string
-	Body   json.RawMessage
+	Method    string
+	URL       string
+	Body      json.RawMessage
+	SessionID string
 }
 
 func normalizePlan(baseURL string, raw []byte) (PlannedCall, error) {
 	var parsed struct {
-		Method string          `json:"method"`
-		URL    string          `json:"url"`
-		Path   string          `json:"path"`
-		Body   json.RawMessage `json:"body"`
+		Method    string          `json:"method"`
+		URL       string          `json:"url"`
+		Path      string          `json:"path"`
+		Body      json.RawMessage `json:"body"`
+		SessionID string          `json:"sessionId"`
 	}
 	text := extractJSONObject(string(raw))
 	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
@@ -51,7 +53,7 @@ func normalizePlan(baseURL string, raw []byte) (PlannedCall, error) {
 	if method == http.MethodGet {
 		body = nil
 	}
-	return PlannedCall{Method: method, URL: resolved, Body: body}, nil
+	return PlannedCall{Method: method, URL: resolved, Body: body, SessionID: strings.TrimSpace(parsed.SessionID)}, nil
 }
 
 func resolveAgainstBase(baseURL, planned string) (string, error) {

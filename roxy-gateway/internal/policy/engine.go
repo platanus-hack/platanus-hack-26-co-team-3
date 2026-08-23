@@ -39,3 +39,14 @@ func ruleByPriority(rules []mcp.Rule, priority int) *mcp.Rule {
 	}
 	return nil
 }
+
+func ruleFromEvaluator(rules []mcp.Rule, n int) *mcp.Rule {
+	if r := ruleByPriority(rules, n); r != nil {
+		return r
+	}
+	if n >= 1 && n <= len(rules) {
+		rule := rules[n-1]
+		return &rule
+	}
+	return nil
+}

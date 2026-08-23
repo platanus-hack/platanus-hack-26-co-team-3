@@ -126,12 +126,15 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateRe
 		Allowed:      result.Allowed,
 	}
 	if !result.Allowed {
+		log.Printf("evaluate denied mcp=%s action=%s", doc.Name, req.Action)
 		return resp, nil
 	}
 
+	log.Printf("evaluate allowed mcp=%s url=%s action=%s → CallMCP", doc.Name, doc.Server.URL, req.Action)
 	up, err := s.agent.CallMCP(ctx, doc, req.Action, req.Payload)
 	if err != nil {
-		return EvaluateResponse{}, err
+		return EvaluateResponse{}, fmt.Errorf("CallMCP name=%s url=%s auth=%s: %w",
+			doc.Name, doc.Server.URL, doc.Authorization.Type, err)
 	}
 	resp.Upstream = &up
 	return resp, nil

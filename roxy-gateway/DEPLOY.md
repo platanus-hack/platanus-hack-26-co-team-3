@@ -1,51 +1,42 @@
-# Deploy Roxy Gateway (Render + MongoDB Atlas)
+# Deploy Roxy Gateway
 
-## Mongo en la nube: Atlas M0 (gratis)
+Imagen Docker. El runtime no está atado a un proveedor: el mismo `Dockerfile` corre en cualquier host con Docker.
 
-Render no ofrece Mongo. El servicio que encaja con este mock (pocos docs, demo) es **MongoDB Atlas Free (M0)**: 512 MB, no expira, `mongodb+srv`.
+## Mongo (misma red)
 
-1. Crea cuenta/cluster: https://cloud.mongodb.com → **Create** → **M0 Free**.
-2. Cloud: **AWS**, región cerca de Render (Oregon `us-west-2` si el API está en Oregon).
-3. Database user:
-   - user: `roxy_prod`
-   - password: el de `.env.production` (generado local, no se commitea)
-4. Network Access → **Allow Access from Anywhere** (`0.0.0.0/0`) para el hack/demo. En serio, para prod real usa las outbound IPs de Render.
-5. Connect → Drivers → copia el URI y reemplaza password + database `roxy`:
+Mongo comparte red con Roxy. **No hay user, password ni token.**
 
 ```
-mongodb+srv://roxy_prod:<PASSWORD>@<cluster>.mongodb.net/roxy?retryWrites=true&w=majority
+MONGO_URI=mongodb://mongo:27017
+MONGO_DB_NAME=roxy
 ```
 
-6. Carga el mock (desde esta carpeta, con el URI de Atlas):
+`mongo` es el hostname del servicio en esa red; cámbialo por el DNS real si es otro.
+
+Seed contra ese host:
 
 ```bash
-MONGO_URI='mongodb+srv://...' MONGO_DB_NAME=roxy go run ./cmd/seed
+MONGO_URI='mongodb://mongo:27017' MONGO_DB_NAME=roxy go run ./cmd/seed
 ```
 
-## Render (Docker)
+## Docker
 
-Repo de deploy: `https://github.com/stvgo/roxy-gateway` (Dockerfile en la raíz).
+```bash
+docker build -t roxy-gateway .
+docker run --rm --network <red-interna> -p 8080:8080 --env-file .env.production roxy-gateway
+```
 
-Dashboard → **New Web Service** → ese repo → **Docker**.
+Health: `GET /health`.
 
-Health check: `/health`. Render inyecta `PORT`; el API lo usa solo.
+Escucha `HTTP_ADDR` (default `:8080`). Si el orquestador inyecta `PORT`, esa gana.
 
-Environment (los `sync: false` del `render.yaml` hay que pegarlos):
+## Environment
 
 | Key | Valor |
 |-----|--------|
-| `MONGO_URI` | URI `mongodb+srv` de Atlas (database `roxy`) |
+| `MONGO_URI` | `mongodb://mongo:27017` (hostname interno, sin credenciales) |
 | `MONGO_DB_NAME` | `roxy` |
 | `EVALUATOR_URL` | URL del API evaluator (`.../evaluate`) |
 | `ANTHROPIC_API_KEY` | Sonnet llama al MCP (tool HTTP) |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
-| `DASHBOARD_URL` | opcional |
-
-O Blueprint: **New** → **Blueprint** → `render.yaml`.
-
-## Docker local
-
-```bash
-docker build -t roxy-gateway .
-docker run --rm -p 8080:8080 --env-file .env -e HTTP_ADDR=:8080 roxy-gateway
-```
+| `DASHBOARD_URL` | opcional, base del API (`https://roxygt.lat/api` → POST `/log`) |
