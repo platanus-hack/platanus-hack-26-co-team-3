@@ -47,19 +47,19 @@ The Roxy dashboard provides an interactive panel for users to see (for now one u
         - [x] Who accessed
         - [x] Log description
 
-2. [ ] Roxy Gateway - API/MCP de agente - **Stiven**
-    - [ ] Authorization con token de agente
-    - [ ] Routing a MCP
-    - [ ] Verificacion
-        - [ ] Verifica detalle de MCP
-            - [ ] Descripcion
-            - [ ] Reglas
-    - [ ] Peticion Aprobada (Opcional)
-        - [ ] Realiza peticion
-        - [ ] Genera log positivo informativo
-    - [ ] Peticion Denegada (Opcional)
-        - [ ] General log negativo actionable
-    - [ ] Respuesta a agente
+2. [x] Roxy Gateway - API/MCP de agente - **Stiven**
+    - [x] Authorization con token de agente
+    - [x] Routing a MCP
+    - [x] Verificacion
+        - [x] Verifica detalle de MCP
+            - [x] Descripcion
+            - [x] Reglas
+    - [x] Peticion Aprobada (Opcional)
+        - [x] Realiza peticion
+        - [x] Genera log positivo informativo
+    - [x] Peticion Denegada (Opcional)
+        - [x] General log negativo actionable
+    - [x] Respuesta a agente
 
 3. [x] Dashboard (full stack web) - **Santiago**
     - [x] API de dashboard que lee logs
@@ -68,12 +68,12 @@ The Roxy dashboard provides an interactive panel for users to see (for now one u
 4. [x] API funcional de demo con datos en Mongodb - **Freddy**
     - [x] Defecto de posible falla en inconsistencia de datos
 
-5. [ ] Langchain/Other flujo de agentes para demo - **Andres**
-    - [ ] 2 agentes, 1 orquestador que recibe tarea y que lance múltiples sub-agentes y que algunos de esos agentes hagan operaciones que no deben y otros operaciones que si, para que se muestre como quedan operaciones indebidas las cuales el agente no sepa cuales son.
-    - [ ] Debería haber un agente que tiene injecciones de modificaciones nocivas para la base de datos (reglas a especificar luego)
-    - [ ] Proceso que efectua cambios nocivos para la API funcional
-        - [ ] Conecta con MCP de Mongo
-        - [ ] Con/Sin Roxy
+5. [x] Langchain/Other flujo de agentes para demo - **Andres**
+    - [x] 2 agentes, 1 orquestador que recibe tarea y que lance múltiples sub-agentes y que algunos de esos agentes hagan operaciones que no deben y otros operaciones que si, para que se muestre como quedan operaciones indebidas las cuales el agente no sepa cuales son.
+    - [x] Debería haber un agente que tiene injecciones de modificaciones nocivas para la base de datos (reglas a especificar luego)
+    - [x] Proceso que efectua cambios nocivos para la API funcional
+        - [x] Conecta con MCP de Mongo
+        - [x] Con/Sin Roxy
 
 6. [x] Investigación - **Freddy**
     - [x] Segun criterios de evaluacion
@@ -91,12 +91,13 @@ The Roxy dashboard provides an interactive panel for users to see (for now one u
     - [ ] API despues de proceso agentic con Roxy
         - [ ] Ver dashboard
 	
-8. [ ] Landing Page - Freddy
+8. [x] Landing Page - Freddy
 
 
-9. [ ] Langchain interceptor class that creates trace of nodes (agents) and register directly into database with their context, their purpose - **Santiago**
-    - [ ] Callback para eventos de langchain (on_chain_start, on_tool_start, on_llm_start)
+9. [x] Langchain interceptor class that creates trace of nodes (agents) and register directly into database with their context, their purpose - **Santiago**
+    - [x] Callback para eventos de langchain (on_chain_start, on_tool_start, on_llm_start)
+    - Terminó viviendo en `roxy-sdk/` (paquete `roxy-guard`) en vez de en su propia carpeta: el callback se engancha una vez en la invocación y registra el árbol solo. Ver `roxy-sdk/src/roxy/callback.py`.
 
-10. [ ] Capa de verificación - **Sebastian**
-    - [ ] Traducir lenguaje natural (componentes de contexto y reglas) a lenguaje para Z3
-    - [ ] Verificar con Z3 la lógica de que el contexto se encuentre correspondiente a las reglas
+10. [x] Capa de verificación - **Sebastian**
+    - [x] Traducir lenguaje natural (componentes de contexto y reglas) a lenguaje para Z3
+    - [x] Verificar con Z3 la lógica de que el contexto se encuentre correspondiente a las reglas
