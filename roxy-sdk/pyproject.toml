@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roxy-guard"
-version = "0.1.0"
+version = "0.2.0"
 description = "Trazabilidad y control de acceso para flujos de agentes que consumen MCPs"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -22,6 +22,9 @@ dependencies = [
     "requests>=2.31,<3.0",
     "langchain-core>=0.3,<1.0",
 ]
+
+[project.scripts]
+roxy = "roxy.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/platanus-hack/platanus-hack-26-co-team-3"
