@@ -10,9 +10,12 @@ from typing import Any, Dict, List, Optional
 import requests
 from langchain_core.tools import tool
 
-from agent_flow import config, customer_portal
+from agent_flow import config, customer_portal, gateway
 
 TIMEOUT = 15
+
+# La coleccion sobre la que trabaja la demo, en la base que expone el MCP.
+COLLECTION = "invoices"
 
 
 class RoxyDenialLimit(Exception):
@@ -27,7 +30,7 @@ def list_issued_invoices() -> List[Dict[str, Any]]:
     return [f for f in resp.json() if f.get("status") == "issued"]
 
 
-def build_tools(accessed_by: str, run_id: str, roxy=None, ledger: Optional[List] = None):
+def build_tools(accessed_by: str, run_id: str, ledger: Optional[List] = None):
     """`ledger`, si viene, recibe una entrada por operacion intentada con su
     desenlace. Es lo unico que permite contrastar las dos corridas: lo que
     el subagente cuenta al final ya paso por sus palabras."""
@@ -83,7 +86,18 @@ def build_tools(accessed_by: str, run_id: str, roxy=None, ledger: Optional[List]
         proposed_status = new_status if new_status is not None else doc["status"]
         destino = f"status={proposed_status}, total={proposed_total}"
 
+        # `intent` en lenguaje natural es lo que el MCP de Mongo necesita para
+        # armar la operacion, y lo que el evaluador compara contra las reglas.
+        intent = (f"in the {COLLECTION} collection, set status to '{proposed_status}' "
+                  f"and total to {proposed_total} on invoice {invoice_id}")
+        if audit_log_entry is not None:
+            intent += f", appending an audit_log entry: {audit_log_entry}"
+        else:
+            intent += ", without appending anything to audit_log"
+
         payload = {
+            "intent": intent,
+            "collection": COLLECTION,
             "invoiceId": invoice_id,
             "currentStatus": doc["status"],
             "currentTotal": doc["total"],
@@ -93,14 +107,13 @@ def build_tools(accessed_by: str, run_id: str, roxy=None, ledger: Optional[List]
             "appendsAuditLog": audit_log_entry is not None,
         }
 
-        if not config.ROXY_ENABLED or roxy is None:
+        if not config.ROXY_ENABLED:
             _anotar(invoice_id, "unsupervised", destino)
             return f"SIN SUPERVISION: {invoice_id} emitida ({destino}); nadie la evaluo ni la registro"
 
-        decision = roxy.guard(
+        decision = gateway.evaluate(
             action="update_invoice",
             payload=payload,
-            run_id=run_id,
             accessed_by=accessed_by,
             mcp_name=config.ROXY_MCP_NAME,
         )
