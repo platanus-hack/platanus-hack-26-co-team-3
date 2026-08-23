@@ -130,6 +130,34 @@
         { "keys": { "mcpId": 1, "time": -1 }, "options": {} },
         { "keys": { "status": 1, "time": -1 }, "options": {} }
       ]
+    },
+    "agents": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "title": "agents",
+          "required": ["purpose", "sessionId"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "purpose": {
+              "bsonType": "string",
+              "description": "What this agent's task/purpose is"
+            },
+            "parentId": {
+              "bsonType": ["objectId", "null"],
+              "description": "Reference to the parent agent's _id, if spawned by another agent (null for a root/orchestrator agent)"
+            },
+            "sessionId": {
+              "bsonType": "string",
+              "description": "Groups all agents belonging to the same run/session"
+            }
+          }
+        }
+      },
+      "indexes": [
+        { "keys": { "sessionId": 1 }, "options": {} },
+        { "keys": { "parentId": 1 }, "options": {} }
+      ]
     }
   }
 }

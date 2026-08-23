@@ -6,8 +6,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import DESCENDING
 
-from db import get_security_collection
-from models import SecurityLog, SecurityLogCreate, SecurityStatus
+from db import get_agents_collection, get_security_collection
+from models import Agent, AgentCreate, SecurityLog, SecurityLogCreate, SecurityStatus
 
 app = FastAPI(title="Roxy Dashboard API")
 
@@ -71,3 +71,36 @@ def create_security_log(payload: SecurityLogCreate):
     if doc.get("mcpId") is not None:
         doc["mcpId"] = str(doc["mcpId"])
     return SecurityLog.model_validate(doc)
+
+
+@app.post("/agents", status_code=201, response_model=Agent)
+def create_agent(payload: AgentCreate):
+    doc = payload.model_dump(by_alias=True, exclude={"parent_id"})
+    doc["parentId"] = None
+    if payload.parent_id is not None:
+        try:
+            doc["parentId"] = ObjectId(payload.parent_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="parentId is not a valid ObjectId")
+
+    collection = get_agents_collection()
+    result = collection.insert_one(doc)
+
+    doc["_id"] = str(result.inserted_id)
+    if doc.get("parentId") is not None:
+        doc["parentId"] = str(doc["parentId"])
+    return Agent.model_validate(doc)
+
+
+@app.get("/agents", response_model=list[Agent])
+def list_agents_by_session(session_id: str = Query(alias="sessionId")):
+    collection = get_agents_collection()
+    cursor = collection.find({"sessionId": session_id})
+
+    agents = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if doc.get("parentId") is not None:
+            doc["parentId"] = str(doc["parentId"])
+        agents.append(Agent.model_validate(doc))
+    return agents

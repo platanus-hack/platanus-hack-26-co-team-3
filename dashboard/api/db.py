@@ -18,3 +18,7 @@ def get_client() -> MongoClient:
 
 def get_security_collection() -> Collection:
     return get_client()[MONGO_DB]["security"]
+
+
+def get_agents_collection() -> Collection:
+    return get_client()[MONGO_DB]["agents"]

@@ -12,9 +12,9 @@ cp .env.example .env   # edit if your Mongo isn't local
 uvicorn main:app --reload
 ```
 
-Requires a MongoDB instance with database `roxy` and collection `security`
-reachable at `MONGO_URI` (see `mongo-data/` for a local instance and mock
-data — not a dependency of this block, just how to get sample data).
+Requires a MongoDB instance with database `roxy` and collections `security`
+and `agents` reachable at `MONGO_URI` (see `mongo-data/` for a local instance
+and mock data — not a dependency of this block, just how to get sample data).
 
 ### With Docker
 
@@ -67,3 +67,28 @@ should point at. Body:
 `mcpId`, `mcpName`, `action`, and `violatedRule` are all optional. `violatedRule`
 should be `null`/omitted for `approved` logs and set for `denied` ones. Returns
 the created log (201) or 400 if `mcpId` isn't a valid ObjectId.
+
+### `POST /agents`
+
+Creates an agent record in the `agents` collection — one document per agent
+instance, e.g. from block 9's Langchain interceptor. Body:
+
+```json
+{
+  "purpose": "sub-task A",
+  "parentId": "6a8a48b95f4646f1624118ba",
+  "sessionId": "session-abc"
+}
+```
+
+`parentId` is optional — omit/`null` it for a root/orchestrator agent with no
+parent. Returns the created agent (201) or 400 if `parentId` isn't a valid
+ObjectId.
+
+### `GET /agents`
+
+Returns every agent belonging to one session.
+
+Query params:
+
+- `sessionId` — required. All agents with this `sessionId`, in insertion order.

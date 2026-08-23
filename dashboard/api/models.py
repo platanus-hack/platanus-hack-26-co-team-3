@@ -42,3 +42,20 @@ class SecurityLogCreate(BaseModel):
     violated_rule: Optional[ViolatedRule] = Field(default=None, alias="violatedRule")
     description: str
     time: datetime
+
+
+class Agent(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = Field(alias="_id")
+    purpose: str
+    parent_id: Optional[str] = Field(default=None, alias="parentId")
+    session_id: str = Field(alias="sessionId")
+
+
+class AgentCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    purpose: str
+    parent_id: Optional[str] = Field(default=None, alias="parentId")
+    session_id: str = Field(alias="sessionId")
