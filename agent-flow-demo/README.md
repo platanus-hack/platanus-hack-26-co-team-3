@@ -37,15 +37,27 @@ cp .env.example .env   # completar ANTHROPIC_API_KEY
 No hay nada que levantar: lo único local es este proceso. `--local` existe
 por si alguien corre su propio gateway en `:8080`.
 
+## Dónde quedan los resultados
+
+Cada corrida se guarda entera en `runs/<timestamp>-<modo>.log`, y la ruta se
+anuncia al terminar. Ahí está el chequeo previo, lo que decidió cada
+subagente, el árbol de delegación y la tabla de operaciones con su desenlace
+(`approved` / `denied` / `unsupervised`).
+
+En el dashboard (https://roxygt.lat) quedan las otras dos mitades: las
+**alertas** de cada operación que Roxy evaluó, con su motivo, y el **árbol de
+agentes** de la sesión — el `sessionId` para encontrarla sale impreso en el
+log.
+
 `compare.sh` corre las dos y contrasta:
 
 ```bash
 ./compare.sh
 ```
 
-Deja los logs en `runs/<timestamp>/` y termina con el resumen: cuántas
-operaciones se aprobaron, cuántas se denegaron y cuántas pasaron sin que
-nadie las viera.
+Deja las dos corridas en `runs/<timestamp>/` y termina con el resumen:
+cuántas operaciones se aprobaron, cuántas se denegaron y cuántas pasaron sin
+que nadie las viera.
 
 ## Tests
 

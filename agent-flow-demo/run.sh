@@ -63,9 +63,28 @@ if [ "$(cat "$HUELLA" 2>/dev/null || true)" != "$ACTUAL" ]; then
   echo "$ACTUAL" > "$HUELLA"
 fi
 
-echo "Roxy:      $ROXY_URL"
-echo "Dashboard: $DASHBOARD_API_URL"
-echo "demo-api:  ${DEMO_API_URL:-https://roxygt.lat/demo-api}"
-echo
+# Toda corrida queda en disco: lo que se ve en pantalla se va con el scroll,
+# y el detalle de que intento cada subagente es lo que hay que poder releer.
+mkdir -p runs
+LOG="${ROXY_RUN_LOG:-runs/$(date +%Y%m%d-%H%M%S)-$MODE.log}"
 
-exec python3 run_demo.py --roxy "$MODE" ${EXTRA+"${EXTRA[@]}"}
+# La corrida puede fallar (chequeo previo, una hoja rota) y el log tiene que
+# quedar igual, con el aviso de donde esta.
+set +e
+{
+  echo "Roxy:      $ROXY_URL"
+  echo "Dashboard: $DASHBOARD_API_URL"
+  echo "demo-api:  ${DEMO_API_URL:-https://roxygt.lat/demo-api}"
+  echo "MCP:       ${ROXY_MCP_NAME:-el de .env / config.py}"
+  echo
+
+  # -u: con la salida entubada a tee, Python la bufferea y la corrida se ve
+  # muda hasta el final.
+  python3 -u run_demo.py --roxy "$MODE" ${EXTRA+"${EXTRA[@]}"}
+} 2>&1 | tee "$LOG"
+
+estado=${PIPESTATUS[0]}
+set -e
+echo
+echo "Corrida guardada en $LOG"
+exit "$estado"

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Corre el mismo flujo dos veces -sin Roxy y con Roxy- y contrasta el estado
-# en que quedaron las facturas. Cada corrida resetea demo-api, asi que las
-# dos parten de los mismos datos limpios.
+# Corre el mismo flujo dos veces -sin Roxy y con Roxy- y contrasta que paso
+# con las operaciones que los subagentes intentaron.
 #
 #   ./compare.sh              contra la Roxy desplegada
 #   ./compare.sh --local      contra la Roxy de localhost:8080
@@ -15,7 +14,7 @@ mkdir -p "$DIR"
 
 for modo in off on; do
   echo "==================== Roxy $modo ===================="
-  if ! ./run.sh "$modo" "$@" 2>&1 | tee "$DIR/$modo.log"; then
+  if ! ROXY_RUN_LOG="$DIR/$modo.log" ./run.sh "$modo" "$@"; then
     echo "La corrida con Roxy $modo fallo; log en $DIR/$modo.log" >&2
     exit 1
   fi
