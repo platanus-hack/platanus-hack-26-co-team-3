@@ -19,3 +19,14 @@ export function formatTime(iso: string): string {
 export function formatFullTime(iso: string): string {
   return fullTimeFormatter.format(new Date(iso))
 }
+
+const relativeFormatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' })
+
+export function formatRelativeTime(iso: string): string {
+  const diffMs = new Date(iso).getTime() - Date.now()
+  const diffMin = Math.round(diffMs / 60_000)
+  if (Math.abs(diffMin) < 60) return relativeFormatter.format(diffMin, 'minute')
+  const diffHour = Math.round(diffMin / 60)
+  if (Math.abs(diffHour) < 24) return relativeFormatter.format(diffHour, 'hour')
+  return relativeFormatter.format(Math.round(diffHour / 24), 'day')
+}
