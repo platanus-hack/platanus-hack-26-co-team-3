@@ -107,6 +107,8 @@ Libre. Lo que más usa el evaluador:
 
 Las credenciales **no** se devuelven al agente: Roxy las usa para pegarle al MCP.
 
+`authorization.type=oauth2`: Roxy hace `POST https://cloud.mongodb.com/api/oauth/token` (`grant_type=client_credentials`) y usa el `access_token` como Bearer. `credentials` es `clientId:clientSecret` (o JSON `{clientId,clientSecret,tokenURL}`). MCP hospedado: `server.url=https://roxygt.lat/mcp`, protocol `mcp` (ese MCP le pega a Atlas).
+
 ### Contrato hacia el dashboard
 
 Si `DASHBOARD_URL` está set (base, p.ej. `https://roxygt.lat/api`), Roxy hace `POST {base}/log` en allow y deny. Fail-open: si el dashboard falla, el evaluate sigue.
