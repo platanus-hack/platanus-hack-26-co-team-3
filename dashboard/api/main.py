@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import DESCENDING
 
 from db import get_agents_collection, get_security_collection
-from models import Agent, AgentCreate, SecurityLog, SecurityLogCreate, SecurityStatus
+from models import Agent, AgentCreate, SecurityLog, SecurityLogCreate, SecurityStatus, Session
 
 app = FastAPI(title="Roxy Dashboard API")
 
@@ -104,3 +104,38 @@ def list_agents_by_session(session_id: str = Query(alias="sessionId")):
             doc["parentId"] = str(doc["parentId"])
         agents.append(Agent.model_validate(doc))
     return agents
+
+
+@app.get("/sessions", response_model=list[Session])
+def list_sessions(limit: int = Query(default=50, ge=1, le=500)):
+    collection = get_agents_collection()
+    pipeline = [
+        {"$sort": {"_id": 1}},
+        {
+            "$group": {
+                "_id": "$sessionId",
+                "agentCount": {"$sum": 1},
+                # agent_flow always registers the root/orchestrator agent
+                # before any child (its id is the parentId children need),
+                # so within a session group the earliest _id is the root.
+                "rootPurpose": {"$first": "$purpose"},
+                "rootId": {"$first": "$_id"},
+            }
+        },
+        {"$sort": {"rootId": -1}},
+        {"$limit": limit},
+    ]
+
+    sessions = []
+    for doc in collection.aggregate(pipeline):
+        sessions.append(
+            Session.model_validate(
+                {
+                    "sessionId": doc["_id"],
+                    "rootPurpose": doc["rootPurpose"],
+                    "agentCount": doc["agentCount"],
+                    "startedAt": doc["rootId"].generation_time,
+                }
+            )
+        )
+    return sessions

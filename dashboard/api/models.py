@@ -59,3 +59,21 @@ class AgentCreate(BaseModel):
     purpose: str
     parent_id: Optional[str] = Field(default=None, alias="parentId")
     session_id: str = Field(alias="sessionId")
+
+
+class Session(BaseModel):
+    """One row per distinct `sessionId` in `agents`, aggregated server-side.
+
+    `startedAt` isn't a stored field anywhere -- `agents` has no timestamp
+    at all -- it's the real creation time embedded in the root agent's
+    ObjectId (the first-inserted doc per session, since agent_flow always
+    registers the orchestrator/root before any child). Not invented data,
+    just read out of the id Mongo already assigned.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    session_id: str = Field(alias="sessionId")
+    root_purpose: str = Field(alias="rootPurpose")
+    agent_count: int = Field(alias="agentCount")
+    started_at: datetime = Field(alias="startedAt")
