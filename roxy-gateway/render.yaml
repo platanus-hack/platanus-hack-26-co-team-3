@@ -18,4 +18,4 @@ services:
       - key: ANTHROPIC_BASE_URL
         value: https://api.anthropic.com
       - key: DASHBOARD_URL
-        sync: false
+        value: https://roxygt.lat/api

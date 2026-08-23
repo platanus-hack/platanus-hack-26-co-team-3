@@ -1,25 +1,20 @@
-# Deploy Roxy Gateway (Render + MongoDB Atlas)
+# Deploy Roxy Gateway
 
-## Mongo en la nube: Atlas M0 (gratis)
+## Mongo (misma red)
 
-Render no ofrece Mongo. El servicio que encaja con este mock (pocos docs, demo) es **MongoDB Atlas Free (M0)**: 512 MB, no expira, `mongodb+srv`.
-
-1. Crea cuenta/cluster: https://cloud.mongodb.com → **Create** → **M0 Free**.
-2. Cloud: **AWS**, región cerca de Render (Oregon `us-west-2` si el API está en Oregon).
-3. Database user:
-   - user: `roxy_prod`
-   - password: el de `.env.production` (generado local, no se commitea)
-4. Network Access → **Allow Access from Anywhere** (`0.0.0.0/0`) para el hack/demo. En serio, para prod real usa las outbound IPs de Render.
-5. Connect → Drivers → copia el URI y reemplaza password + database `roxy`:
+En prod Mongo comparte red con Roxy (Docker / red privada). **No hay user, password ni token.**
 
 ```
-mongodb+srv://roxy_prod:<PASSWORD>@<cluster>.mongodb.net/roxy?retryWrites=true&w=majority
+MONGO_URI=mongodb://mongo:27017
+MONGO_DB_NAME=roxy
 ```
 
-6. Carga el mock (desde esta carpeta, con el URI de Atlas):
+`mongo` es el hostname del servicio en esa red; cámbialo por el DNS real si es otro.
+
+Seed contra ese host:
 
 ```bash
-MONGO_URI='mongodb+srv://...' MONGO_DB_NAME=roxy go run ./cmd/seed
+MONGO_URI='mongodb://mongo:27017' MONGO_DB_NAME=roxy go run ./cmd/seed
 ```
 
 ## Render (Docker)
@@ -34,12 +29,12 @@ Environment (los `sync: false` del `render.yaml` hay que pegarlos):
 
 | Key | Valor |
 |-----|--------|
-| `MONGO_URI` | URI `mongodb+srv` de Atlas (database `roxy`) |
+| `MONGO_URI` | `mongodb://mongo:27017` (hostname interno, sin credenciales) |
 | `MONGO_DB_NAME` | `roxy` |
 | `EVALUATOR_URL` | URL del API evaluator (`.../evaluate`) |
 | `ANTHROPIC_API_KEY` | Sonnet llama al MCP (tool HTTP) |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
-| `DASHBOARD_URL` | opcional |
+| `DASHBOARD_URL` | opcional, base del API (`https://roxygt.lat/api` → POST `/log`) |
 
 O Blueprint: **New** → **Blueprint** → `render.yaml`.
 
