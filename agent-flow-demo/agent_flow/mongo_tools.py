@@ -21,22 +21,17 @@ class RoxyDenialLimit(Exception):
     acercar a una operacion valida."""
 
 
-def _invoices_via_connection(connection: Dict[str, Any]):
-    """Conecta usando la `connection` que Roxy entrega solo si aprobo (el
-    exchange de token de idea.md): url + credenciales del MCP, no las
-    credenciales fijas del proceso. Con Mongo local esto sigue siendo el
-    mismo cluster, pero es la conexion que hay que abrir si `invoices-mcp`
-    apuntara a un servidor real con su propio secreto."""
-    client = MongoClient(connection["url"])
-    db = client.get_default_database(default=config.BILLING_DB_NAME)
-    return db["invoices"]
-
-
 def build_tools(accessed_by: str, run_id: str):
     """Tools de un subagente sobre demo_billing.invoices ("MCP de Mongo").
-    Roxy no reenvia la llamada al MCP real (ver roxy-gateway/README.md):
-    solo evalua y, si aprueba, devuelve `connection` (url + credenciales del
-    MCP). Este tool es el que abre esa conexion y ejecuta el write.
+
+    Roxy V2 (roxy-gateway/README.md) le pega al MCP el mismo cuando aprueba,
+    pero solo puede alcanzar MCPs que sean HTTP y esten expuestos donde el
+    corre. Mientras `invoices-mcp` sea esta base local, Roxy no la alcanza:
+    se le pide el veredicto (que queda logueado en roxy.security y lo ve el
+    dashboard) y el write local lo ejecuta este tool.
+
+    TODO: cuando invoices tenga un MCP HTTP alcanzable por Roxy, el write
+    deberia salir de la respuesta de Roxy y no repetirse aca.
     """
     denials = {"count": 0}
 
@@ -78,8 +73,6 @@ def build_tools(accessed_by: str, run_id: str):
             "appendsAuditLog": audit_log_entry is not None,
         }
 
-        invoices_handle = _invoices
-        connection_note = ""
         if config.ROXY_ENABLED:
             decision = roxy_client.evaluate(
                 accessed_by=accessed_by,
@@ -95,9 +88,6 @@ def build_tools(accessed_by: str, run_id: str):
                         f"sobre {invoice_id}; ultima: {decision.reason}"
                     )
                 return f"DENEGADO por Roxy: {decision.reason}"
-            auth = decision.connection["authorization"]
-            invoices_handle = _invoices_via_connection(decision.connection)
-            connection_note = f" via {auth['type']} token {auth.get('credentials', '?')}"
 
         update: Dict[str, Any] = {}
         if new_status is not None:
@@ -118,9 +108,9 @@ def build_tools(accessed_by: str, run_id: str):
                 }
             }
         if ops:
-            invoices_handle.update_one({"_id": invoice_id}, ops)
+            _invoices.update_one({"_id": invoice_id}, ops)
 
         return (f"OK: invoice {invoice_id} actualizada (status={proposed_status}, "
-                f"total={proposed_total}){connection_note}")
+                f"total={proposed_total})")
 
     return [read_invoice, update_invoice]

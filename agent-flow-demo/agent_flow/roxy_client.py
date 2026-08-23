@@ -6,17 +6,16 @@ import requests
 from agent_flow import config
 
 
+class RoxyUnavailable(Exception):
+    """Roxy no pudo emitir un veredicto (evaluator caido, MCP caido, MCP
+    inexistente). No es un permiso: no se puede asumir ni allow ni deny."""
+
+
 @dataclass
 class RoxyDecision:
-    decision: str
+    allowed: bool
     reason: str
-    violated_rule: Optional[Dict[str, Any]]
-    log_id: Optional[str]
-    connection: Optional[Dict[str, Any]]
-
-    @property
-    def allowed(self) -> bool:
-        return self.decision == "approved"
+    mcp_response: Optional[Any]
 
 
 def evaluate(
@@ -27,9 +26,12 @@ def evaluate(
     payload: Dict[str, Any],
     mcp_name: str = None,
 ) -> RoxyDecision:
-    """POST /v1/evaluate on roxy-gateway. Roxy only judges — it never
-    forwards the call to the real MCP, so the caller still has to execute
-    the actual write itself once (and if) this returns allowed=True.
+    """POST /v1/evaluate en roxy-gateway.
+
+    Contrato V2 (roxy-gateway/README.md): Roxy ya no devuelve un JSON de
+    decision. Segun el veredicto del evaluator, o corta con 403, o le pega
+    al MCP el mismo (inyectando credenciales, que nunca vuelven al agente) y
+    devuelve la respuesta cruda del MCP. El status HTTP ES la decision.
     """
     resp = requests.post(
         f"{config.ROXY_URL}/v1/evaluate",
@@ -40,14 +42,20 @@ def evaluate(
             "payload": payload,
         },
         headers={"X-Roxy-Agent-Run": run_id},
-        timeout=30,
+        timeout=60,
     )
+
+    if resp.status_code == 403:
+        return RoxyDecision(allowed=False, reason="denegado por Roxy", mcp_response=None)
+
+    if resp.status_code in (502, 503, 404):
+        raise RoxyUnavailable(f"roxy status {resp.status_code}: {resp.text[:200]}")
+
     resp.raise_for_status()
-    body = resp.json()
-    return RoxyDecision(
-        decision=body["decision"],
-        reason=body.get("reason", ""),
-        violated_rule=body.get("violatedRule"),
-        log_id=body.get("logId"),
-        connection=body.get("connection"),
-    )
+
+    try:
+        body = resp.json()
+    except ValueError:
+        body = resp.text
+
+    return RoxyDecision(allowed=True, reason="aprobado por Roxy", mcp_response=body)
