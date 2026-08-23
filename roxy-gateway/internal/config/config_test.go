@@ -63,7 +63,7 @@ func TestLoad(t *testing.T) {
 			wantErr: "ANTHROPIC_API_KEY",
 		},
 		{
-			name: "render PORT overrides HTTP_ADDR",
+			name: "PORT overrides HTTP_ADDR",
 			env: map[string]string{
 				"MONGO_URI":         "mongodb://localhost:27017",
 				"EVALUATOR_URL":     "http://127.0.0.1:8080/evaluate",

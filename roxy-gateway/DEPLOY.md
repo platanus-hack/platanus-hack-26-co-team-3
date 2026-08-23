@@ -1,8 +1,10 @@
 # Deploy Roxy Gateway
 
+Imagen Docker. El runtime no está atado a un proveedor: el mismo `Dockerfile` corre en cualquier host con Docker.
+
 ## Mongo (misma red)
 
-En prod Mongo comparte red con Roxy (Docker / red privada). **No hay user, password ni token.**
+Mongo comparte red con Roxy. **No hay user, password ni token.**
 
 ```
 MONGO_URI=mongodb://mongo:27017
@@ -17,15 +19,18 @@ Seed contra ese host:
 MONGO_URI='mongodb://mongo:27017' MONGO_DB_NAME=roxy go run ./cmd/seed
 ```
 
-## Render (Docker)
+## Docker
 
-Repo de deploy: `https://github.com/stvgo/roxy-gateway` (Dockerfile en la raíz).
+```bash
+docker build -t roxy-gateway .
+docker run --rm --network <red-interna> -p 8080:8080 --env-file .env.production roxy-gateway
+```
 
-Dashboard → **New Web Service** → ese repo → **Docker**.
+Health: `GET /health`.
 
-Health check: `/health`. Render inyecta `PORT`; el API lo usa solo.
+Escucha `HTTP_ADDR` (default `:8080`). Si el orquestador inyecta `PORT`, esa gana.
 
-Environment (los `sync: false` del `render.yaml` hay que pegarlos):
+## Environment
 
 | Key | Valor |
 |-----|--------|
@@ -35,12 +40,3 @@ Environment (los `sync: false` del `render.yaml` hay que pegarlos):
 | `ANTHROPIC_API_KEY` | Sonnet llama al MCP (tool HTTP) |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
 | `DASHBOARD_URL` | opcional, base del API (`https://roxygt.lat/api` → POST `/log`) |
-
-O Blueprint: **New** → **Blueprint** → `render.yaml`.
-
-## Docker local
-
-```bash
-docker build -t roxy-gateway .
-docker run --rm -p 8080:8080 --env-file .env -e HTTP_ADDR=:8080 roxy-gateway
-```

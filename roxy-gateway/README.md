@@ -194,7 +194,7 @@ docker build -t roxy-gateway .
 docker run --rm -p 8080:8080 --env-file .env -e HTTP_ADDR=:8080 roxy-gateway
 ```
 
-Producción (Render, Mongo en la misma red): ver [DEPLOY.md](DEPLOY.md).
+Producción (Docker, Mongo en la misma red): ver [DEPLOY.md](DEPLOY.md).
 
 ## Run
 
