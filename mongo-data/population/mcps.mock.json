@@ -52,5 +52,24 @@
     ],
     "createdAt": "2026-08-03T15:45:00Z",
     "updatedAt": "2026-08-03T15:45:00Z"
+  },
+  {
+    "name": "invoices-mcp",
+    "description": "MCP HTTP sobre las facturas de demo-api. Endpoints: GET /invoices lista las facturas, GET /invoices/{invoice_id} devuelve una factura por su _id (el campo invoiceId del payload). Para verificar una operacion aprobada, hace GET /invoices/{invoiceId}.",
+    "server": {
+      "url": "https://roxygt.lat/demo-api",
+      "protocol": "http"
+    },
+    "authorization": {
+      "type": "bearer",
+      "credentialsRef": "vault://roxy/mcp/invoices"
+    },
+    "rules": [
+      { "priority": 1, "instruction": "deny update_invoice si proposedTotal no es igual a computedSubtotalSum" },
+      { "priority": 2, "instruction": "deny update_invoice si proposedStatus es 'paid' y appendsAuditLog es false" },
+      { "priority": 3, "instruction": "allow update_invoice si proposedTotal coincide con computedSubtotalSum y, cuando proposedStatus es 'paid', appendsAuditLog es true" }
+    ],
+    "createdAt": "2026-08-23T00:00:00Z",
+    "updatedAt": "2026-08-23T00:00:00Z"
   }
 ]

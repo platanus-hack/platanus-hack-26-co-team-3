@@ -24,9 +24,9 @@ done
 
 resumen() {
   local log="$1"
-  echo "  antes:    $(grep -m1 'Consistencia ANTES:' "$log" | cut -d: -f2- | xargs)"
-  echo "  despues:  $(grep -m1 'Consistencia DESPUES:' "$log" | cut -d: -f2- | xargs)"
-  echo "  negadas:  $(grep -c '\[Roxy\] DENEGADO' "$log" || true) operaciones (detalle y motivo, en el dashboard)"
+  echo "  aprobadas:      $(grep -c 'approved]' "$log" || true)"
+  echo "  denegadas:      $(grep -c 'denied]' "$log" || true)"
+  echo "  sin supervisar: $(grep -c 'unsupervised]' "$log" || true)"
   echo "  veredicto: $(grep -m1 '^RESULTADO:' "$log" | cut -d: -f2- | xargs)"
 }
 

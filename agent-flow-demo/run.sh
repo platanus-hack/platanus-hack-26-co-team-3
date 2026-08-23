@@ -65,7 +65,7 @@ fi
 
 echo "Roxy:      $ROXY_URL"
 echo "Dashboard: $DASHBOARD_API_URL"
-echo "demo-api:  ${DEMO_API_URL:-http://localhost:8001}"
+echo "demo-api:  ${DEMO_API_URL:-https://roxygt.lat/demo-api}"
 echo
 
 exec python3 run_demo.py --roxy "$MODE" ${EXTRA+"${EXTRA[@]}"}
