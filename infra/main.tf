@@ -125,7 +125,7 @@ resource "aws_cloudfront_distribution" "app" {
 
   ordered_cache_behavior {
     path_pattern             = "/api/*"
-    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods           = ["GET", "HEAD"]
     target_origin_id         = "ec2-api"
     viewer_protocol_policy   = "redirect-to-https"
