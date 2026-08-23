@@ -34,6 +34,18 @@ roxy = Roxy(api_url="https://roxygt.lat/api")
 executor.invoke(entrada, config={"callbacks": [roxy]})   # el árbol se registra solo
 ```
 
+## Roxy viene de proxy
+
+Un proxy se para en el medio y habla por vos. El agente no le habla al MCP:
+le habla a Roxy. Roxy evalúa, y **si aprueba es Roxy quien hace la llamada**,
+inyectando credenciales que el agente nunca ve
+(`internal/gateway/mcpclient.go`), y devolviéndole la respuesta cruda del MCP
+(`internal/http/handlers.go`).
+
+Ahí está el punto: si Roxy solo respondiera «sí» o «no», el agente podría
+ignorarlo y llamar al MCP igual. No puede, porque sin pasar por Roxy no tiene
+credenciales con qué entrar. La decisión se cumple en vez de sugerirse.
+
 ## El recorrido de una petición
 
 ```

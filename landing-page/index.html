@@ -142,6 +142,23 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
 .feat p{font-size:15.5px;margin-top:7px}
 
 
+
+/* proxy: por que la decision se cumple y no se puede esquivar */
+.proxy{margin-top:56px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--surface)}
+.proxy-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:0;padding:40px 34px}
+@media (max-width:900px){.proxy-flow{grid-template-columns:1fr;gap:14px;padding:30px 24px}}
+.pbox{border:1px solid var(--line);border-radius:16px;padding:22px 20px;background:var(--bg);text-align:center}
+.pbox.mid{border-color:var(--ink);border-width:2px}
+.pbox .who{font-family:var(--display);font-weight:700;font-size:17px;color:var(--ink)}
+.pbox .what{font-size:13.5px;margin-top:7px;line-height:1.45}
+.parrow{font-family:var(--mono);font-size:19px;color:var(--muted);padding:0 18px;text-align:center}
+@media (max-width:900px){.parrow{padding:0;transform:rotate(90deg)}}
+.proxy-key{border-top:1px solid var(--line);padding:26px 34px;display:flex;gap:16px;align-items:flex-start}
+@media (max-width:700px){.proxy-key{flex-direction:column;gap:10px;padding:22px 24px}}
+.proxy-key .k{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);flex-shrink:0;padding-top:2px;width:150px}
+.proxy-key p{font-size:15.5px;line-height:1.55}
+.proxy-key strong{color:var(--ink);font-weight:600}
+
 /* contexto: la noticia que hace urgente el problema */
 .news{display:grid;grid-template-columns:.95fr 1.05fr;gap:52px;align-items:center;margin-top:56px;text-align:left}
 @media (max-width:960px){.news{grid-template-columns:1fr;gap:34px}}
@@ -173,6 +190,7 @@ footer{border-top:1px solid var(--line-soft);padding:44px 0;font-size:14.5px;col
   <a href="#" class="brand"><img src="assets/roxy-logo.png" alt="">Roxy</a>
   <div class="nav-links">
     <a href="#problema">Por qué Roxy</a>
+    <a href="#proxy">Cómo funciona</a>
     <a href="#integrar">SDK</a>
     <a href="#prueba">Verificación</a>
     <a href="#contexto">Contexto</a>
@@ -271,6 +289,50 @@ footer{border-top:1px solid var(--line-soft);padding:44px 0;font-size:14.5px;col
         <li>Queda el agente exacto, la regla exacta y el momento exacto.</li>
         <li>El árbol muestra quién lo pidió y por orden de quién.</li>
       </ul>
+    </div>
+  </div>
+</div></section>
+
+
+<section id="proxy"><div class="wrap">
+  <div class="center"><div class="eyebrow">De dónde viene el nombre</div></div>
+  <h2 class="sec-title">Roxy viene de proxy. Ahí está la diferencia.</h2>
+  <p class="sec-sub">
+    Un proxy es alguien que se para en el medio y habla por vos. El agente no le habla al MCP:
+    le habla a Roxy. Roxy decide, y si aprueba, <em>es Roxy quien hace la llamada</em>.
+  </p>
+
+  <div class="proxy">
+    <div class="proxy-flow">
+      <div class="pbox">
+        <div class="who">El agente</div>
+        <div class="what">Pide una acción. No tiene credenciales del MCP.</div>
+      </div>
+      <div class="parrow">→</div>
+      <div class="pbox mid">
+        <div class="who">Roxy</div>
+        <div class="what">Evalúa contra tus reglas. Si aprueba, inyecta las credenciales y llama.</div>
+      </div>
+      <div class="parrow">→</div>
+      <div class="pbox">
+        <div class="who">El MCP</div>
+        <div class="what">Recibe la llamada de Roxy, nunca del agente.</div>
+      </div>
+    </div>
+    <div class="proxy-key">
+      <div class="k">Por qué importa</div>
+      <p>
+        Si Roxy solo dijera «sí» o «no», el agente podría ignorarlo y llamar al MCP igual.
+        No puede: <strong>las credenciales las tiene Roxy, no el agente</strong>. Sin pasar por
+        Roxy no hay con qué entrar — la decisión deja de ser una sugerencia y pasa a cumplirse.
+      </p>
+    </div>
+    <div class="proxy-key">
+      <div class="k">Lo que devuelve</div>
+      <p>
+        La respuesta cruda del MCP, tal cual, para que el agente no tenga que cambiar cómo la
+        lee. <strong>Lo único que nunca cruza de vuelta es el secreto.</strong>
+      </p>
     </div>
   </div>
 </div></section>
