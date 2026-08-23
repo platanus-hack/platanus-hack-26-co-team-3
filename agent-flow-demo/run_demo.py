@@ -26,13 +26,11 @@ def _get_consistency() -> dict:
     return resp.json()
 
 
-def _print_agent_tree(session_id: str):
+def _print_agent_tree(roxy, session_id: str):
     """Relee de la API lo que quedo registrado, para ver el arbol como lo
     va a ver el dashboard y no como lo cree este proceso."""
-    from agent_flow import agents_client
-
     try:
-        nodos = agents_client.fetch_tree(session_id)
+        nodos = roxy.tree()
     except Exception as exc:
         print(f"\n(no se pudo leer el arbol de /agents: {type(exc).__name__})")
         return
@@ -96,7 +94,7 @@ def main():
         indent = "  " * r["depth"]
         print(f"{indent}* {r['invoice_id']} ({r['accessed_by']}, profundidad={r['depth']}): {r['output']}")
 
-    _print_agent_tree(outcome["session_id"])
+    _print_agent_tree(outcome["roxy"], outcome["session_id"])
 
     after = _get_consistency()
     print(f"\nConsistencia DESPUES: {json.dumps(after, ensure_ascii=False)}\n")

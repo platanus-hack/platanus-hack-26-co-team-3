@@ -63,7 +63,7 @@ def plan_con(monkeypatch):
             classmethod(lambda cls, msgs: _LLMFalso(texto_del_llm)),
         )
         return orchestrator._delegate_plan(
-            ["A", "B", "C"], "etiqueta", handler=None,
+            ["A", "B", "C"], "etiqueta", roxy=None,
             node_run_id="n1", parent_run_id=None,
         )
     return _armar

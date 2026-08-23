@@ -25,4 +25,3 @@ ROXY_MCP_NAME = os.environ.get("ROXY_MCP_NAME", "invoices-mcp")
 # de seguridad por una operacion que Roxy ya rechazo.
 MAX_ROXY_DENIALS = int(os.environ.get("MAX_ROXY_DENIALS", "2"))
 
-TRACES_PATH = ROOT_DIR / "traces" / "run.jsonl"

@@ -4,7 +4,9 @@ from typing import Any, Dict, List, Optional
 from langchain_core.tools import tool
 from pymongo import MongoClient
 
-from agent_flow import config, roxy_client
+from roxy import RoxyUnavailable
+
+from agent_flow import config
 
 _client = MongoClient(config.MONGO_URI)
 _db = _client[config.BILLING_DB_NAME]
@@ -21,7 +23,7 @@ class RoxyDenialLimit(Exception):
     acercar a una operacion valida."""
 
 
-def build_tools(accessed_by: str, run_id: str):
+def build_tools(accessed_by: str, run_id: str, roxy=None):
     """Tools de un subagente sobre demo_billing.invoices ("MCP de Mongo").
 
     Roxy V2 (roxy-gateway/README.md) le pega al MCP el mismo cuando aprueba,
@@ -73,12 +75,13 @@ def build_tools(accessed_by: str, run_id: str):
             "appendsAuditLog": audit_log_entry is not None,
         }
 
-        if config.ROXY_ENABLED:
-            decision = roxy_client.evaluate(
-                accessed_by=accessed_by,
-                run_id=run_id,
+        if config.ROXY_ENABLED and roxy is not None:
+            decision = roxy.guard(
                 action="update_invoice",
                 payload=payload,
+                run_id=run_id,
+                accessed_by=accessed_by,
+                mcp_name=config.ROXY_MCP_NAME,
             )
             if not decision.allowed:
                 denials["count"] += 1
