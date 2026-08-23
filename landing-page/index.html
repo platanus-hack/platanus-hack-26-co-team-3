@@ -143,6 +143,16 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
 
 
 
+
+.cli{margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:900px){.cli{grid-template-columns:1fr}}
+.cli-box{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--surface)}
+.cli-head{padding:15px 20px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.cli-body{padding:20px;font-family:var(--mono);font-size:13.5px;line-height:2.05;overflow-x:auto}
+.cli-cmd{color:var(--ink);font-weight:500}
+.cli-cmd::before{content:"$ ";color:var(--muted)}
+.cli-note{color:var(--muted)}
+
 /* proxy: por que la decision se cumple y no se puede esquivar */
 .proxy{margin-top:56px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--surface)}
 .proxy-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:0;padding:40px 34px}
@@ -392,6 +402,42 @@ if not decision.allowed:
         <p>El agente no sabe que Roxy existe. No hay que reescribir prompts ni confiar en que el modelo se porte bien.</p></div>
     </div>
   </div>
+
+  <div class="center" style="margin-top:76px"><div class="eyebrow">Y desde la terminal</div></div>
+  <h2 class="sec-title" style="font-size:clamp(26px,3.2vw,36px)">Mirá lo que hicieron tus agentes sin escribir código.</h2>
+
+  <div class="cli">
+    <div class="cli-box">
+      <div class="cli-head">funciona apuntando al despliegue, sin montar nada</div>
+      <div class="cli-body">
+        <div class="cli-cmd">roxy check</div>
+        <div class="cli-note">&nbsp;&nbsp;¿responden gateway, demo-api y dashboard?</div>
+        <div class="cli-cmd">roxy runs</div>
+        <div class="cli-note">&nbsp;&nbsp;las últimas corridas de agentes</div>
+        <div class="cli-cmd">roxy tree &lt;sessionId&gt;</div>
+        <div class="cli-note">&nbsp;&nbsp;el árbol de delegación, quién lanzó a quién</div>
+        <div class="cli-cmd">roxy logs --denied</div>
+        <div class="cli-note">&nbsp;&nbsp;solo lo que Roxy bloqueó</div>
+      </div>
+    </div>
+    <div class="cli-box">
+      <div class="cli-head">roxy tree — salida real</div>
+      <div class="cli-body">
+<span class="cli-note">14 agentes</span><br>
+└─ Delegar 10 facturas: INV-1002…<br>
+&nbsp;&nbsp;&nbsp;├─ Delegar 4: INV-1002, INV-1005…<br>
+&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─ Conciliar INV-1002<br>
+&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─ <span style="color:#c0392b">Conciliar INV-1005 ← bloqueado</span><br>
+&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;└─ Conciliar INV-1011<br>
+&nbsp;&nbsp;&nbsp;└─ Delegar 2: INV-1023, INV-1024
+      </div>
+    </div>
+  </div>
+
+  <p class="sec-sub" style="margin-top:30px">
+    <code>roxy audit reglas.json</code> corre la auditoría formal sobre tus propias reglas
+    y sale con código distinto de cero si encuentra un hueco — para ponerlo en CI.
+  </p>
 </div></section>
 
 <section id="prueba"><div class="wrap">
