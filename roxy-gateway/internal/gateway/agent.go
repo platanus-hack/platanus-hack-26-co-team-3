@@ -18,14 +18,21 @@ const (
 	anthropicVersion = "2023-06-01"
 	agentTimeout     = 60 * time.Second
 	agentMaxTokens   = 2048
-	agentMaxRounds   = 4
+	agentMaxRounds   = 6
 )
 
 const agentSystem = `You fulfill an already-approved agent request against an MCP server.
-You MUST use the http_request tool to talk to the MCP. Do not only describe the call.
+You MUST use the http_request tool. Do not only describe the call.
 Auth headers are added automatically; do not send credentials.
 url must stay on the MCP base URL host.
-Choose method, path/url, and body from the MCP description, protocol, and the agent's action+payload.`
+
+If protocol is "mcp", speak Streamable HTTP / JSON-RPC:
+1) POST initialize: {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"roxy","version":"1.0"}}}
+2) Read mcp-session-id from the tool result headers and pass it as sessionId on later calls
+3) Then tools/list or tools/call as needed, e.g. find/aggregate with connectionId "preconfigured" when the server says so
+4) Stop after you have the data that answers the agent
+
+Choose method, url/path, body, and sessionId from the MCP description, protocol, and the agent's action+payload.`
 
 type MCPAgent interface {
 	CallMCP(ctx context.Context, doc *mcp.MCP, action string, payload []byte) (Upstream, error)
@@ -93,10 +100,15 @@ func (a *AnthropicAgent) CallMCP(ctx context.Context, doc *mcp.MCP, action strin
 			}
 			cp := up
 			last = &cp
+			resultPayload, _ := json.Marshal(map[string]any{
+				"status":  up.StatusCode,
+				"headers": map[string]string{"mcp-session-id": headerValue(up, "Mcp-Session-Id")},
+				"body":    string(up.Body),
+			})
 			toolResults = append(toolResults, map[string]any{
 				"type":        "tool_result",
 				"tool_use_id": tu.ID,
-				"content":     string(up.Body),
+				"content":     string(resultPayload),
 			})
 		}
 		messages = append(messages, map[string]any{
@@ -155,9 +167,10 @@ func (a *AnthropicAgent) round(ctx context.Context, messages []map[string]any) (
 				"input_schema": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
-						"url":    map[string]any{"type": "string"},
-						"body":   map[string]any{"type": "object"},
+						"method":    map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
+						"url":       map[string]any{"type": "string"},
+						"body":      map[string]any{"type": "object"},
+						"sessionId": map[string]any{"type": "string", "description": "Mcp-Session-Id from initialize"},
 					},
 					"required": []string{"method", "url"},
 				},

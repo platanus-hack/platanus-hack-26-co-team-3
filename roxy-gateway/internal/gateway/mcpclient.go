@@ -20,6 +20,7 @@ type MCPCaller interface {
 type Upstream struct {
 	StatusCode  int
 	ContentType string
+	Header      http.Header
 	Body        []byte
 }
 
@@ -46,6 +47,10 @@ func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) 
 	if planHasBody(plan.Body) {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	if sid := strings.TrimSpace(plan.SessionID); sid != "" {
+		req.Header.Set("Mcp-Session-Id", sid)
+	}
 	setAuth(req, doc.Authorization)
 
 	res, err := c.httpClient.Do(req)
@@ -60,8 +65,16 @@ func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) 
 	return Upstream{
 		StatusCode:  res.StatusCode,
 		ContentType: res.Header.Get("Content-Type"),
+		Header:      res.Header.Clone(),
 		Body:        raw,
 	}, nil
+}
+
+func headerValue(up Upstream, key string) string {
+	if up.Header == nil {
+		return ""
+	}
+	return up.Header.Get(key)
 }
 
 func setAuth(req *http.Request, auth mcp.Authorization) {
