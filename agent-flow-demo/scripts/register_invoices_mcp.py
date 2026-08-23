@@ -20,10 +20,19 @@ from pymongo import MongoClient
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent_flow import config  # noqa: E402
 
+# La URL tiene que ser HTTP y alcanzable desde donde corra el gateway: cuando
+# aprueba, Roxy le pega al MCP (agent.go) y un `mongodb://` deja al planner sin
+# nada que llamar, lo que vuelve 503 cualquier operacion permitida.
 DOC = {
     "name": "invoices-mcp",
-    "description": "MCP sobre demo_billing.invoices (demo-api, bloque 4) para el flujo agentico de conciliacion",
-    "server": {"url": f"{config.MONGO_URI}/{config.BILLING_DB_NAME}", "protocol": "mcp"},
+    "description": (
+        "MCP HTTP sobre demo_billing.invoices (demo-api, bloque 4). "
+        "Endpoints: GET /invoices lista las facturas, "
+        "GET /invoices/{invoice_id} devuelve una factura por su _id "
+        "(el campo invoiceId del payload). Para verificar una operacion "
+        "aprobada, hace GET /invoices/{invoiceId}."
+    ),
+    "server": {"url": config.DEMO_API_URL, "protocol": "http"},
     "authorization": {
         "type": "bearer",
         "credentialsRef": "vault://roxy/mcp/invoices",

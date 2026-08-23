@@ -27,13 +27,13 @@ def build_tools(accessed_by: str, run_id: str, roxy=None):
     """Tools de un subagente sobre demo_billing.invoices ("MCP de Mongo").
 
     Roxy V2 (roxy-gateway/README.md) le pega al MCP el mismo cuando aprueba,
-    pero solo puede alcanzar MCPs que sean HTTP y esten expuestos donde el
-    corre. Mientras `invoices-mcp` sea esta base local, Roxy no la alcanza:
-    se le pide el veredicto (que queda logueado en roxy.security y lo ve el
-    dashboard) y el write local lo ejecuta este tool.
+    y `invoices-mcp` esta registrado apuntando a demo-api por HTTP: esa
+    llamada existe, pero es de lectura. El veredicto queda logueado en
+    roxy.security -es lo que ve el dashboard- y el write sobre Mongo lo
+    ejecuta este tool.
 
-    TODO: cuando invoices tenga un MCP HTTP alcanzable por Roxy, el write
-    deberia salir de la respuesta de Roxy y no repetirse aca.
+    TODO: cuando demo-api exponga la escritura, el write deberia salir de la
+    respuesta de Roxy y no repetirse aca.
     """
     denials = {"count": 0}
 
@@ -85,6 +85,10 @@ def build_tools(accessed_by: str, run_id: str, roxy=None):
             )
             if not decision.allowed:
                 denials["count"] += 1
+                # El texto de la denegacion solo lo ve el agente: sin esto la
+                # corrida con Roxy se ve igual que la de sin, salvo por el
+                # dano que no ocurrio.
+                print(f"  [Roxy] DENEGADO {invoice_id} ({accessed_by}): {decision.reason}")
                 if denials["count"] >= config.MAX_ROXY_DENIALS:
                     raise RoxyDenialLimit(
                         f"{denials['count']} operaciones denegadas por Roxy "
