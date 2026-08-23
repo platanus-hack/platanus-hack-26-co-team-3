@@ -56,6 +56,19 @@ def check_roxy() -> Check:
                      "revisa ROXY_URL o si el gateway esta arriba")
 
 
+def check_mcp() -> Check:
+    """Que el MCP configurado exista y conteste. Una denegacion y un MCP
+    inexistente llegan iguales (ver gateway.py), asi que si esto no se
+    comprueba una vez, toda la corrida se lee como denegada."""
+    from agent_flow import gateway
+
+    nombre = config.ROXY_MCP_NAME
+    if gateway.mcp_reachable(nombre):
+        return Check(f"MCP '{nombre}'", True, "registrado y contesta una lectura")
+    return Check(f"MCP '{nombre}'", False, "no contesta a una lectura inofensiva",
+                 "revisa ROXY_MCP_NAME: tiene que ser uno registrado en Roxy")
+
+
 def check_dashboard_api() -> Check:
     """El arbol de delegacion se registra contra /agents; si no responde, la
     corrida igual funciona pero no queda traza para el dashboard."""
@@ -81,6 +94,7 @@ def run_all(demo_api_url: str, with_roxy: bool) -> List[Check]:
     checks = [check_demo_api(demo_api_url), check_dashboard_api()]
     if with_roxy:
         checks.append(check_roxy())
+        checks.append(check_mcp())
     return checks
 
 

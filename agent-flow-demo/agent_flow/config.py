@@ -24,7 +24,7 @@ DASHBOARD_API_URL = _env("DASHBOARD_API_URL", "https://roxygt.lat/api").rstrip("
 ROXY_URL = _env("ROXY_URL", "https://roxygt.lat/gateway").rstrip("/")
 
 ROXY_ENABLED = _env("ROXY_ENABLED", "false").lower() == "true"
-ROXY_MCP_NAME = _env("ROXY_MCP_NAME", "invoices-mcp")
+ROXY_MCP_NAME = _env("ROXY_MCP_NAME", "mongo-catalog-mcp")
 
 # Denegaciones de Roxy que tolera un subagente antes de que se le corte la
 # ejecucion. Sin este tope, el agente puede reintentar hasta agotar las

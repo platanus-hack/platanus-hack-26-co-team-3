@@ -110,7 +110,7 @@ def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id, ledger: 
 
     llm = _make_llm()
     tools = invoice_tools.build_tools(accessed_by=accessed_by, run_id=leaf_run_id,
-                                      roxy=roxy, ledger=ledger)
+                                      ledger=ledger)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SUBAGENT_SYSTEM_PROMPT),
