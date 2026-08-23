@@ -20,8 +20,17 @@
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --wrap:1180px;
 }
+html[data-theme="dark"]{
+  --bg:#0a0a0b; --surface:#131315; --line:#26262a; --line-soft:#1c1c1f;
+  --ink:#fafafa; --body:#a1a1a6; --muted:#6f6f76;
+  --accent:#fafafa; --on-accent:#0a0a0b;
+  --ok:#4ade80; --bad:#f87171;
+}
+html[data-theme="dark"] .brand img,html[data-theme="dark"] .hero-bg{filter:none}
+html[data-theme="dark"] .brand img{filter:invert(1)}
+html[data-theme="light"] .brand img{filter:none}
 @media (prefers-color-scheme:dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bg:#0a0a0b; --surface:#131315; --line:#26262a; --line-soft:#1c1c1f;
     --ink:#fafafa; --body:#a1a1a6; --muted:#6f6f76;
     --accent:#fafafa; --on-accent:#0a0a0b;
@@ -44,20 +53,22 @@ nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,
 .nav-in{display:flex;align-items:center;gap:16px;height:72px}
 .brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-.02em}
 .brand img{width:30px;height:30px}
-@media (prefers-color-scheme:dark){.brand img{filter:invert(1)}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand img{filter:invert(1)}}
 .nav-links{margin-left:auto;display:flex;align-items:center;gap:30px;font-size:15px}
-.nav-links a{color:var(--body);transition:color .15s}
-.nav-links a:hover{color:var(--ink)}
+.nav-links a:not(.btn){color:var(--body);transition:color .15s}
+.nav-links a:not(.btn):hover{color:var(--ink)}
 .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--sans);font-weight:600;padding:13px 24px;border-radius:10px;font-size:15px;border:1.5px solid transparent;transition:.18s;cursor:pointer}
 .btn-primary{background:var(--accent);color:var(--on-accent)}
 .btn-primary:hover{transform:translateY(-1px)}
 .btn-ghost{border-color:var(--line);color:var(--ink);background:transparent}
 .btn-ghost:hover{border-color:var(--ink)}
+.icon-btn{width:42px;height:42px;border-radius:10px;border:1.5px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;flex-shrink:0}
+.icon-btn:hover{border-color:var(--ink)}
 @media (max-width:880px){.nav-links a:not(.btn){display:none}}
 
 .hero{position:relative;overflow:hidden;padding:118px 0 92px;text-align:center}
 .hero-bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.5}
-@media (prefers-color-scheme:dark){.hero-bg{opacity:.42}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hero-bg{opacity:.42}}
 .hero-bg .edge{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:5 7;opacity:.5;animation:drift 9s linear infinite}
 .hero-bg .edge:nth-of-type(2n){animation-duration:13s}
 .hero-bg .edge:nth-of-type(3n){animation-duration:17s}
@@ -130,6 +141,24 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
 .feat h3{font-size:18px;font-weight:600}
 .feat p{font-size:15.5px;margin-top:7px}
 
+
+/* contexto: la noticia que hace urgente el problema */
+.news{display:grid;grid-template-columns:.95fr 1.05fr;gap:52px;align-items:center;margin-top:56px;text-align:left}
+@media (max-width:960px){.news{grid-template-columns:1fr;gap:34px}}
+.news-when{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.04em}
+.news h3{font-size:clamp(26px,3.4vw,38px);font-weight:700;margin-top:14px;line-height:1.14}
+.news p{font-size:16.5px;margin-top:18px}
+.news .src{font-size:13px;color:var(--muted);margin-top:18px}
+.tl{border:1px solid var(--line);border-radius:20px;padding:30px 32px;background:var(--surface)}
+.tl-row{display:flex;gap:20px;padding:15px 0;border-bottom:1px solid var(--line-soft)}
+.tl-row:last-child{border-bottom:none}
+.tl-date{font-family:var(--mono);font-size:13px;color:var(--muted);width:82px;flex-shrink:0;padding-top:2px}
+.tl-what{font-size:15.5px;color:var(--body)}
+.tl-row.now .tl-what{color:var(--ink);font-weight:600}
+.tl-row.now .tl-date{color:var(--ink)}
+.chain{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;justify-content:center}
+.chain span{font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:7px 15px;color:var(--body)}
+
 .cta{text-align:center;padding:118px 0}
 .cta h2{font-size:clamp(34px,5.4vw,60px);font-weight:700;max-width:17ch;margin:0 auto}
 .cta p{margin:24px auto 0;max-width:54ch;font-size:18px}
@@ -143,10 +172,15 @@ footer{border-top:1px solid var(--line-soft);padding:44px 0;font-size:14.5px;col
 <nav><div class="wrap nav-in">
   <a href="#" class="brand"><img src="assets/roxy-logo.png" alt="">Roxy</a>
   <div class="nav-links">
-    <a href="#problema">Problema</a>
-    <a href="#integrar">Integrar</a>
-    <a href="#prueba">Prueba</a>
-    <a class="btn btn-primary" href="https://roxygt.lat" target="_blank" rel="noopener">Ver el dashboard →</a>
+    <a href="#problema">Por qué Roxy</a>
+    <a href="#integrar">SDK</a>
+    <a href="#prueba">Verificación</a>
+    <a href="#contexto">Contexto</a>
+    <button type="button" class="icon-btn" id="theme" aria-label="Cambiar tema" title="Tema claro / oscuro">
+      <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6L16 16M16 4l-1.4 1.4M5.4 14.6L4 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <a class="btn btn-ghost" href="https://pypi.org/project/roxy-guard/" target="_blank" rel="noopener">SDK</a>
+    <a class="btn btn-primary" href="https://roxygt.lat" target="_blank" rel="noopener">Dashboard →</a>
   </div>
 </div></nav>
 
@@ -174,7 +208,7 @@ footer{border-top:1px solid var(--line-soft);padding:44px 0;font-size:14.5px;col
   </svg>
 
   <div class="wrap hero-in">
-    <div class="eyebrow"><span class="dot"></span>Si nadie lo verifica, nadie lo puede defender</div>
+    <div class="eyebrow"><span class="dot"></span>API gateway de seguridad para agentes y MCPs</div>
     <h1>Tus agentes delegan.<b>Nadie revisa en quién.</b></h1>
     <p class="lede">
       Un agente le pasa la tarea a otro, y ese a otro. El que termina escribiendo en tu base
@@ -183,9 +217,9 @@ footer{border-top:1px solid var(--line-soft);padding:44px 0;font-size:14.5px;col
     </p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="https://roxygt.lat" target="_blank" rel="noopener">Ver el dashboard en vivo</a>
-      <a class="btn btn-ghost" href="#prueba">¿Quién autorizó la acción?</a>
+      <a class="btn btn-ghost" href="https://pypi.org/project/roxy-guard/" target="_blank" rel="noopener">Instalar el SDK</a>
     </div>
-    <div class="hero-note">pip install roxy-guard · verificación determinista · ALLOW · DENY · evidencia auditable</div>
+    <div class="hero-note"><code>pip install roxy-guard</code> · v0.1.0 en PyPI · verificación determinista · evidencia on-chain</div>
     <div class="scroll-cue">SCROLL</div>
   </div>
 </header>
@@ -326,11 +360,41 @@ if not decision.allowed:
     </div>
     <div class="term-foot">El mismo motor decide en runtime. Mismo input → mismo veredicto, byte por byte.</div>
   </div>
+  <div class="chain">
+    <span>Solana · devnet</span><span>Solana Attestation Service</span><span>cada veredicto anclado</span><span>allow y deny por igual</span><span>re-verificable por terceros</span>
+  </div>
 
   <div class="steps" style="margin-top:24px">
     <div class="step"><h3>Auditoría, no opinión</h3><p>Z3 busca activamente un hueco en tus reglas. Si lo encuentra, da el caso exacto — no un score de confianza.</p></div>
     <div class="step"><h3>Reproducible</h3><p>El LLM traduce la regla una vez. La decisión corre sobre esa política congelada: un tercero re-ejecuta y obtiene lo mismo.</p></div>
     <div class="step"><h3>Anclado on-chain</h3><p>Cada veredicto queda con su huella en Solana. Probar que algo se detuvo vale tanto como haberlo detenido.</p></div>
+  </div>
+</div></section>
+
+
+<section id="contexto"><div class="wrap">
+  <div class="center"><div class="eyebrow">Por qué ahora</div></div>
+  <h2 class="sec-title">Los dos protocolos ya comparten techo. La verificación entre ellos, no.</h2>
+
+  <div class="news">
+    <div>
+      <div class="news-when">17 de agosto de 2026</div>
+      <h3>A2A pasó a la misma fundación que MCP.</h3>
+      <p>
+        MCP conecta un agente con tus herramientas. A2A conecta un agente con otro agente.
+        Desde agosto los dos viven bajo la Agentic AI Foundation — y entre ellos queda
+        exactamente el hueco que Roxy cubre: nadie verifica qué pide un agente delegado
+        antes de que llegue al dato.
+      </p>
+      <p class="src">Fuente: Axios · Agentic AI Foundation · Linux Foundation</p>
+    </div>
+    <div class="tl">
+      <div class="tl-row"><div class="tl-date">Abr 2025</div><div class="tl-what">Google anuncia A2A con 50+ partners.</div></div>
+      <div class="tl-row"><div class="tl-date">Jun 2025</div><div class="tl-what">A2A pasa a la Linux Foundation.</div></div>
+      <div class="tl-row"><div class="tl-date">Dic 2025</div><div class="tl-what">Anthropic dona MCP a la AAIF.</div></div>
+      <div class="tl-row"><div class="tl-date">Abr 2026</div><div class="tl-what">A2A v1.0: uso empresarial en producción.</div></div>
+      <div class="tl-row now"><div class="tl-date">Ago 2026</div><div class="tl-what">A2A entra a la AAIF: mismo techo que MCP.</div></div>
+    </div>
   </div>
 </div></section>
 
@@ -348,5 +412,19 @@ if not decision.allowed:
   <span>Platanus Hack 26 · Bogotá · Track AI Security</span>
 </div></footer>
 
+<script>
+(function(){
+  var root=document.documentElement, KEY='roxy-theme';
+  var saved=localStorage.getItem(KEY);
+  if(saved) root.setAttribute('data-theme',saved);
+  document.getElementById('theme').addEventListener('click',function(){
+    var dark=root.getAttribute('data-theme')==='dark'
+      || (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme:dark)').matches);
+    var next=dark?'light':'dark';
+    root.setAttribute('data-theme',next);
+    localStorage.setItem(KEY,next);
+  });
+})();
+</script>
 </body>
 </html>

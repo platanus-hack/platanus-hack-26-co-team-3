@@ -8,7 +8,7 @@
 - John Stiven Valeriano ([@stvgo](https://github.com/stvgo))
 - Sebastian ([verifier](verifier/))
 
-Dashboard: **<https://roxygt.lat>**
+**Dashboard en vivo:** <https://roxygt.lat> · **SDK:** <https://pypi.org/project/roxy-guard/>
 
 ---
 
@@ -23,8 +23,8 @@ reglas del MCP, somete cada acción sensible a un verificador antes de que se
 ejecute, inyecta las credenciales solo si aprueba, y deja registrado cada
 intento.
 
-```python
-pip install roxy-guard
+```bash
+pip install roxy-guard        # https://pypi.org/project/roxy-guard/
 ```
 
 ```python
@@ -64,7 +64,7 @@ se ancla además en Solana (devnet).
 | 5 | Flujo de agentes | [`agent-flow-demo/`](agent-flow-demo/) | LangChain. Orquestador y subagentes, con y sin Roxy |
 | 6 | Investigación | [`research/`](research/) | Incidentes reales, mercado, competencia, arquitectura |
 | 8 | Landing | [`landing-page/`](landing-page/) | Página pública del producto |
-| 9 | SDK | [`roxy-sdk/`](roxy-sdk/) | `roxy-guard`: registra el árbol de delegación y somete acciones |
+| 9 | SDK | [`roxy-sdk/`](roxy-sdk/) · [PyPI](https://pypi.org/project/roxy-guard/) | `roxy-guard`: registra el árbol de delegación y somete acciones |
 | 10 | Verificador | [`verifier/`](verifier/) | Rust + Z3 + atestación en Solana |
 | — | Infra | [`infra/`](infra/) | Terraform: todo detrás de un CloudFront |
 
