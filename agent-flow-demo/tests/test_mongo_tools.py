@@ -2,7 +2,9 @@
 de Roxy y que corte al subagente que insiste con operaciones denegadas."""
 import pytest
 
-from agent_flow import config, mongo_tools, roxy_client
+from roxy import Decision, RoxyUnavailable
+
+from agent_flow import config, mongo_tools
 
 FACTURA = {
     "_id": "INV-1005",
@@ -28,25 +30,31 @@ def escrituras(monkeypatch):
     return hechas
 
 
-def responder(monkeypatch, *decisiones):
-    """Encola las respuestas que dara Roxy, una por llamada."""
-    restantes = list(decisiones)
+class _RoxyFalso:
+    """Sustituye al SDK: encola veredictos y registra como se le pidieron."""
 
-    def falso_evaluate(**kwargs):
-        resultado = restantes.pop(0)
+    def __init__(self, *decisiones):
+        self.restantes = list(decisiones)
+        self.llamadas = []
+
+    def guard(self, **kwargs):
+        self.llamadas.append(kwargs)
+        resultado = self.restantes.pop(0)
         if isinstance(resultado, Exception):
             raise resultado
         return resultado
 
-    monkeypatch.setattr(roxy_client, "evaluate", falso_evaluate)
+
+def responder(monkeypatch, *decisiones):
+    return _RoxyFalso(*decisiones)
 
 
 def permitido():
-    return roxy_client.RoxyDecision(allowed=True, reason="ok", mcp_response={})
+    return Decision(allowed=True, reason="ok", response={})
 
 
 def denegado():
-    return roxy_client.RoxyDecision(allowed=False, reason="viola la regla 1", mcp_response=None)
+    return Decision(allowed=False, reason="viola la regla 1")
 
 
 def actualizar(tools, **kwargs):
@@ -56,7 +64,7 @@ def actualizar(tools, **kwargs):
 
 def test_sin_roxy_escribe_directo(monkeypatch, escrituras):
     monkeypatch.setattr(config, "ROXY_ENABLED", False)
-    tools = mongo_tools.build_tools("agent-1", "run-1")
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=None)
     resultado = actualizar(tools, new_total=0)
     assert "OK" in resultado
     assert len(escrituras) == 1
@@ -65,8 +73,8 @@ def test_sin_roxy_escribe_directo(monkeypatch, escrituras):
 def test_denegado_no_escribe(monkeypatch, escrituras):
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
     monkeypatch.setattr(config, "MAX_ROXY_DENIALS", 3)
-    responder(monkeypatch, denegado())
-    tools = mongo_tools.build_tools("agent-1", "run-1")
+    falso = responder(monkeypatch, denegado())
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=falso)
     resultado = actualizar(tools, new_total=0)
     assert "DENEGADO" in resultado
     assert escrituras == []
@@ -74,8 +82,8 @@ def test_denegado_no_escribe(monkeypatch, escrituras):
 
 def test_aprobado_escribe(monkeypatch, escrituras):
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
-    responder(monkeypatch, permitido())
-    tools = mongo_tools.build_tools("agent-1", "run-1")
+    falso = responder(monkeypatch, permitido())
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=falso)
     resultado = actualizar(tools, new_status="paid", audit_log_entry="pago confirmado")
     assert "OK" in resultado
     assert len(escrituras) == 1
@@ -84,8 +92,8 @@ def test_aprobado_escribe(monkeypatch, escrituras):
 def test_corta_al_llegar_al_tope_de_denegaciones(monkeypatch, escrituras):
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
     monkeypatch.setattr(config, "MAX_ROXY_DENIALS", 2)
-    responder(monkeypatch, denegado(), denegado())
-    tools = mongo_tools.build_tools("agent-1", "run-1")
+    falso = responder(monkeypatch, denegado(), denegado())
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=falso)
 
     assert "DENEGADO" in actualizar(tools, new_total=0)
     with pytest.raises(mongo_tools.RoxyDenialLimit):
@@ -97,10 +105,10 @@ def test_el_tope_es_por_subagente(monkeypatch, escrituras):
     """Una hoja que agota su tope no debe afectar a las demas."""
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
     monkeypatch.setattr(config, "MAX_ROXY_DENIALS", 2)
-    responder(monkeypatch, denegado(), denegado())
+    falso = responder(monkeypatch, denegado(), denegado())
 
-    tools_a = mongo_tools.build_tools("agent-a", "run-a")
-    tools_b = mongo_tools.build_tools("agent-b", "run-b")
+    tools_a = mongo_tools.build_tools("agent-a", "run-a", roxy=falso)
+    tools_b = mongo_tools.build_tools("agent-b", "run-b", roxy=falso)
 
     assert "DENEGADO" in actualizar(tools_a, new_total=0)
     assert "DENEGADO" in actualizar(tools_b, new_total=0)
@@ -110,25 +118,20 @@ def test_el_tope_es_por_subagente(monkeypatch, escrituras):
 def test_roxy_caido_no_escribe(monkeypatch, escrituras):
     """Si Roxy no puede decidir, no hay permiso: fail-closed."""
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
-    responder(monkeypatch, roxy_client.RoxyUnavailable("gateway 504"))
-    tools = mongo_tools.build_tools("agent-1", "run-1")
-    with pytest.raises(roxy_client.RoxyUnavailable):
+    falso = responder(monkeypatch, RoxyUnavailable("gateway 504"))
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=falso)
+    with pytest.raises(RoxyUnavailable):
         actualizar(tools, new_total=0)
     assert escrituras == []
 
 
 def test_el_payload_lleva_lo_que_roxy_necesita(monkeypatch, escrituras):
     monkeypatch.setattr(config, "ROXY_ENABLED", True)
-    capturado = {}
-
-    def falso_evaluate(**kwargs):
-        capturado.update(kwargs)
-        return permitido()
-
-    monkeypatch.setattr(roxy_client, "evaluate", falso_evaluate)
-    tools = mongo_tools.build_tools("agent-1", "run-1")
+    falso = responder(monkeypatch, permitido())
+    tools = mongo_tools.build_tools("agent-1", "run-1", roxy=falso)
     actualizar(tools, new_status="paid", new_total=0)
 
+    capturado = falso.llamadas[0]
     payload = capturado["payload"]
     assert payload["computedSubtotalSum"] == 600000
     assert payload["proposedTotal"] == 0

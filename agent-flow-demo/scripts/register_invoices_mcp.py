@@ -11,17 +11,19 @@ Las reglas son el espejo textual de los tres invariantes que valida
 demo-api (demo-api/app/consistency.py), para que el LLM evaluador de Roxy
 tenga contra que comparar el payload que le manda agent_flow.mongo_tools.
 """
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 from pymongo import MongoClient
 
-MONGO_URI = "mongodb://localhost:27017"
-ROXY_DB_NAME = "roxy"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from agent_flow import config  # noqa: E402
 
 DOC = {
     "name": "invoices-mcp",
     "description": "MCP sobre demo_billing.invoices (demo-api, bloque 4) para el flujo agentico de conciliacion",
-    "server": {"url": "mongodb://localhost:27017/demo_billing", "protocol": "mcp"},
+    "server": {"url": f"{config.MONGO_URI}/{config.BILLING_DB_NAME}", "protocol": "mcp"},
     "authorization": {
         "type": "bearer",
         "credentialsRef": "vault://roxy/mcp/invoices",
@@ -36,8 +38,8 @@ DOC = {
 
 
 def main():
-    client = MongoClient(MONGO_URI)
-    db = client[ROXY_DB_NAME]
+    client = MongoClient(config.MONGO_URI)
+    db = client[config.ROXY_DB_NAME]
     now = datetime.now(timezone.utc)
     doc = dict(DOC, updatedAt=now)
     db.mcps.update_one(
@@ -45,7 +47,7 @@ def main():
         {"$set": doc, "$setOnInsert": {"createdAt": now}},
         upsert=True,
     )
-    print(f"invoices-mcp registrado en {ROXY_DB_NAME}.mcps")
+    print(f"invoices-mcp registrado en {config.ROXY_DB_NAME}.mcps")
 
 
 if __name__ == "__main__":

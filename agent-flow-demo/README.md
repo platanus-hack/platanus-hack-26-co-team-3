@@ -64,8 +64,8 @@ haga falta sin arrastrar corrupción de la corrida anterior.
   tools de arriba).
 - `agent_flow/seed_injection.py` — agrega `notes` a dos facturas del seed de
   Freddy (una nota legítima, una que empuja a saltarse auditoría).
-- `agent_flow/tracing.py` — captura `on_chain_start`/`on_tool_start`/
-  `on_llm_start` y escribe `traces/run.jsonl` con el shape propuesto en
-  `demo/INTEGRATION-NOTES.md` para la futura colección `traces`.
+- La trazabilidad y el control de acceso salen del SDK (`roxy-sdk/`, publicado como `roxy`): una
+  instancia de `Roxy` se pasa como callback y registra el árbol en
+  `/agents` sola.
 - `scripts/register_invoices_mcp.py` — upsert de `invoices-mcp` en
   `roxy.mcps` (no toca `mongo-data/population/mcps.mock.json`).
