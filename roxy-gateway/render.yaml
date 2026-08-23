@@ -11,5 +11,11 @@ services:
         value: roxy
       - key: EVALUATOR_URL
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      - key: ANTHROPIC_BASE_URL
+        value: https://api.anthropic.com
       - key: DASHBOARD_URL
         sync: false

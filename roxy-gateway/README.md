@@ -4,12 +4,13 @@ API **roxy**: capa de seguridad entre agentes y MCPs. V1 no evalúa rules: llama
 
 ## Qué hace
 
-`POST /v1/evaluate` → carga el MCP por `mcpName` → POST al evaluator (`EVALUATOR_URL`) con mcp (id, name, description, rules) + request (accessedBy, action, payload) + time, **sin credenciales** → log en `security` + notify dashboard →
+`POST /v1/evaluate` → carga el MCP por `mcpName` → POST al evaluator (`EVALUATOR_URL`) con mcp + request + time, **sin credenciales** → log + dashboard →
 
-- evaluator `allowed: true` → Roxy usa `authorization.credentials` del MCP, POST a `server.url`, y **devuelve la respuesta cruda del MCP**
-- evaluator `allowed: false` → **403** sin body
-- evaluator caído → **503** (sin log ni notify)
-- MCP caído después del allow → **502**
+- evaluator `allowed: false` → **403** sin body (no llama al MCP)
+- evaluator `allowed: true` → **Sonnet 5** decide endpoint/método/body y llama al MCP vía tool `http_request` (Roxy solo ejecuta el HTTP e inyecta credenciales). Devuelve la **respuesta cruda del MCP**
+- evaluator caído → **503**
+- el modelo no llega a llamar al MCP → **503** `planner unavailable`
+- MCP caído → **502**
 - MCP no existe → **404**
 
 ## API
@@ -112,7 +113,8 @@ El evaluator responde `allowed`, `violatedPriority`, `reason` (lo que usa Roxy).
 
 - Go 1.22+
 - Mongo en `mongodb://localhost:27017`, database `roxy` (el bloque `mongo-data` lo levanta con `./run.sh`)
-- `EVALUATOR_URL` (API de veredicto, p.ej. `http://127.0.0.1:8080/evaluate`)
+- `EVALUATOR_URL` (API de veredicto)
+- `ANTHROPIC_API_KEY` (Sonnet llama al MCP con tool HTTP)
 
 ## Config
 
@@ -129,6 +131,9 @@ set -a && source .env && set +a
 | `MONGO_URI` | required | |
 | `MONGO_DB_NAME` | `roxy` | |
 | `EVALUATOR_URL` | required | `POST` JSON del contrato evaluator |
+| `ANTHROPIC_API_KEY` | required | Sonnet llama al MCP (tool HTTP) |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` | |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | |
 | `DASHBOARD_URL` | vacío = no-op | POST JSON en allow y deny |
 
 ## Tests

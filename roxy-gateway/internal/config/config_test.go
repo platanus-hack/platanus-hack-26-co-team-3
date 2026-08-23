@@ -17,43 +17,59 @@ func TestLoad(t *testing.T) {
 		{
 			name: "defaults",
 			env: map[string]string{
-				"MONGO_URI":     "mongodb://localhost:27017",
-				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
-				"HTTP_ADDR":     "",
-				"MONGO_DB_NAME": "",
-				"PORT":          "",
-				"DASHBOARD_URL": "",
+				"MONGO_URI":          "mongodb://localhost:27017",
+				"EVALUATOR_URL":      "http://127.0.0.1:8080/evaluate",
+				"ANTHROPIC_API_KEY":  "sk-ant-test",
+				"ANTHROPIC_MODEL":    "",
+				"ANTHROPIC_BASE_URL": "",
+				"HTTP_ADDR":          "",
+				"MONGO_DB_NAME":      "",
+				"PORT":               "",
+				"DASHBOARD_URL":      "",
 			},
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, ":8080", cfg.HTTPAddr)
 				require.Equal(t, "roxy", cfg.MongoDBName)
 				require.Equal(t, "mongodb://localhost:27017", cfg.MongoURI)
 				require.Equal(t, "http://127.0.0.1:8080/evaluate", cfg.EvaluatorURL)
+				require.Equal(t, "claude-sonnet-5", cfg.AnthropicModel)
 			},
 		},
 		{
 			name: "missing mongo",
 			env: map[string]string{
-				"MONGO_URI":     "",
-				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
+				"MONGO_URI":         "",
+				"EVALUATOR_URL":     "http://127.0.0.1:8080/evaluate",
+				"ANTHROPIC_API_KEY": "sk-ant-test",
 			},
 			wantErr: "MONGO_URI",
 		},
 		{
 			name: "missing evaluator url",
 			env: map[string]string{
-				"MONGO_URI":     "mongodb://localhost:27017",
-				"EVALUATOR_URL": "",
+				"MONGO_URI":         "mongodb://localhost:27017",
+				"EVALUATOR_URL":     "",
+				"ANTHROPIC_API_KEY": "sk-ant-test",
 			},
 			wantErr: "EVALUATOR_URL",
 		},
 		{
+			name: "missing anthropic key",
+			env: map[string]string{
+				"MONGO_URI":         "mongodb://localhost:27017",
+				"EVALUATOR_URL":     "http://127.0.0.1:8080/evaluate",
+				"ANTHROPIC_API_KEY": "",
+			},
+			wantErr: "ANTHROPIC_API_KEY",
+		},
+		{
 			name: "render PORT overrides HTTP_ADDR",
 			env: map[string]string{
-				"MONGO_URI":     "mongodb://localhost:27017",
-				"EVALUATOR_URL": "http://127.0.0.1:8080/evaluate",
-				"HTTP_ADDR":     ":8080",
-				"PORT":          "10000",
+				"MONGO_URI":         "mongodb://localhost:27017",
+				"EVALUATOR_URL":     "http://127.0.0.1:8080/evaluate",
+				"ANTHROPIC_API_KEY": "sk-ant-test",
+				"HTTP_ADDR":         ":8080",
+				"PORT":              "10000",
 			},
 			check: func(t *testing.T, cfg Config) {
 				require.Equal(t, ":10000", cfg.HTTPAddr)

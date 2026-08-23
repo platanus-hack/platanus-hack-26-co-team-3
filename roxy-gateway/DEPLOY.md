@@ -37,6 +37,8 @@ Environment (los `sync: false` del `render.yaml` hay que pegarlos):
 | `MONGO_URI` | URI `mongodb+srv` de Atlas (database `roxy`) |
 | `MONGO_DB_NAME` | `roxy` |
 | `EVALUATOR_URL` | URL del API evaluator (`.../evaluate`) |
+| `ANTHROPIC_API_KEY` | Sonnet llama al MCP (tool HTTP) |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` |
 | `DASHBOARD_URL` | opcional |
 
 O Blueprint: **New** → **Blueprint** → `render.yaml`.
