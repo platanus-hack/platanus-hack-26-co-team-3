@@ -32,6 +32,8 @@ EXISTING_ACM_ARN=""
 EXISTING_DOMAIN_ALIASES=""
 EXISTING_EVALUATOR_URL=""
 EXISTING_DASHBOARD_URL=""
+EXISTING_ANTHROPIC_MODEL=""
+EXISTING_ANTHROPIC_BASE_URL=""
 if [[ -f "$TFVARS_FILE" ]]; then
   EXISTING_VPC_ID=$(sed -n -E 's/^vpc_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_SUBNET_ID=$(sed -n -E 's/^subnet_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
@@ -39,6 +41,8 @@ if [[ -f "$TFVARS_FILE" ]]; then
   EXISTING_DOMAIN_ALIASES=$(sed -n -E 's/^domain_aliases *= *\[(.*)\]$/\1/p' "$TFVARS_FILE" | sed -E 's/"//g; s/, */,/g')
   EXISTING_EVALUATOR_URL=$(sed -n -E 's/^evaluator_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_DASHBOARD_URL=$(sed -n -E 's/^dashboard_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
+  EXISTING_ANTHROPIC_MODEL=$(sed -n -E 's/^anthropic_model *= *"(.*)"$/\1/p' "$TFVARS_FILE")
+  EXISTING_ANTHROPIC_BASE_URL=$(sed -n -E 's/^anthropic_base_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
 fi
 
 info "Configuration"
@@ -51,6 +55,13 @@ if [[ -z "$MONGO_URI" ]]; then
   echo ""
 fi
 [[ -n "$MONGO_URI" ]] || { echo "ERROR: mongo_uri is required."; exit 1; }
+
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+  read -r -s -p "Anthropic API key (anthropic_api_key, input hidden): " ANTHROPIC_API_KEY
+  echo ""
+fi
+[[ -n "$ANTHROPIC_API_KEY" ]] || { echo "ERROR: anthropic_api_key is required (roxy-gateway refuses to start without it)."; exit 1; }
 
 VPC_ID="${VPC_ID:-}"
 if [[ -z "$VPC_ID" ]]; then
@@ -91,6 +102,18 @@ if [[ -z "$DASHBOARD_URL" ]]; then
   DASHBOARD_URL="${DASHBOARD_URL:-$EXISTING_DASHBOARD_URL}"
 fi
 
+ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-}"
+if [[ -z "$ANTHROPIC_MODEL" ]]; then
+  read -r -p "Anthropic model (anthropic_model, optional — blank uses the default, claude-sonnet-5)${EXISTING_ANTHROPIC_MODEL:+ [$EXISTING_ANTHROPIC_MODEL]}: " ANTHROPIC_MODEL
+  ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-$EXISTING_ANTHROPIC_MODEL}"
+fi
+
+ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}"
+if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
+  read -r -p "Anthropic base URL (anthropic_base_url, optional — blank uses the default, https://api.anthropic.com)${EXISTING_ANTHROPIC_BASE_URL:+ [$EXISTING_ANTHROPIC_BASE_URL]}: " ANTHROPIC_BASE_URL
+  ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-$EXISTING_ANTHROPIC_BASE_URL}"
+fi
+
 info "Writing $TFVARS_FILE..."
 {
   echo "vpc_id = \"$VPC_ID\""
@@ -98,6 +121,12 @@ info "Writing $TFVARS_FILE..."
   echo "evaluator_url = \"$EVALUATOR_URL\""
   if [[ -n "$DASHBOARD_URL" ]]; then
     echo "dashboard_url = \"$DASHBOARD_URL\""
+  fi
+  if [[ -n "$ANTHROPIC_MODEL" ]]; then
+    echo "anthropic_model = \"$ANTHROPIC_MODEL\""
+  fi
+  if [[ -n "$ANTHROPIC_BASE_URL" ]]; then
+    echo "anthropic_base_url = \"$ANTHROPIC_BASE_URL\""
   fi
   if [[ -n "$ACM_CERTIFICATE_ARN" ]]; then
     echo "acm_certificate_arn = \"$ACM_CERTIFICATE_ARN\""
@@ -146,7 +175,8 @@ if [[ "$DO_INFRA" == "true" ]]; then
   terraform apply -auto-approve \
     ${REPLACE_ARGS[@]+"${REPLACE_ARGS[@]}"} \
     -var-file="$TFVARS_FILE" \
-    -var="mongo_uri=$MONGO_URI"
+    -var="mongo_uri=$MONGO_URI" \
+    -var="anthropic_api_key=$ANTHROPIC_API_KEY"
 else
   info "Skipping infra (do_infra=false)"
 fi

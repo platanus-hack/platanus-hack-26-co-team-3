@@ -34,7 +34,10 @@ server to AWS, within the AWS Free Tier for a low-traffic project.
     Terraform; point it at wherever that service actually runs). It also POSTs a notification to
     `dashboard_url` (dashboard API's `POST /log`) on every decision — defaults to
     `http://localhost:8000/log`, since all four containers share this one instance (host
-    networking), so it never needs to leave the box.
+    networking), so it never needs to leave the box. Also needs `anthropic_api_key`: it calls
+    Claude (`anthropic_model`, default `claude-sonnet-5`) to decide how to invoke the MCP
+    tool. Passed as a plain environment variable, not SSM (same as `mongo_uri` for this
+    service).
   - **mcp-server** — port 8003, running the official `mongodb/mongodb-mcp-server` image straight
     from Docker Hub (no ECR repo, no build step — it's not built from source in this repo, unlike
     the other three). Talks directly to `mongo_uri` — no OAuth, no Atlas Service Account,
@@ -62,6 +65,7 @@ server to AWS, within the AWS Free Tier for a low-traffic project.
 - A MongoDB connection string reachable from the EC2 instance (Atlas, or your own), with `roxy` and
   `demo_billing` databases
 - A reachable URL for `evaluator_url` (roxy-gateway refuses to start without one)
+- An Anthropic API key for `anthropic_api_key` (roxy-gateway refuses to start without one)
 
 ## Remote state (one-time bootstrap)
 
@@ -96,15 +100,16 @@ aws dynamodb create-table \
 
 ## Deploy
 
-The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`, `vpc_id`,
-`subnet_id`, `evaluator_url`, `dashboard_url`, `acm_certificate_arn`, and `domain_aliases` (the last
-three blank to skip/use defaults), then runs `terraform apply` and builds/pushes/deploys the
-dashboard API, demo-api, and roxy-gateway in one shot. `mongo_uri` is entered with hidden input and
-passed straight to `terraform apply -var` — it's never written to disk. The other six are non-secret
-and get saved to `terraform.tfvars` (gitignored), so the next run offers them back as defaults
-instead of asking from scratch. Any of the seven can also come from the environment instead of a
-prompt (see `./scripts/deploy-from-env.sh` below) — whichever are already set are used as-is, only
-what's missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh
+The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`,
+`anthropic_api_key`, `vpc_id`, `subnet_id`, `evaluator_url`, `dashboard_url`, `anthropic_model`,
+`anthropic_base_url`, `acm_certificate_arn`, and `domain_aliases` (the last five blank to
+skip/use defaults), then runs `terraform apply` and builds/pushes/deploys the dashboard API,
+demo-api, and roxy-gateway in one shot. `mongo_uri` and `anthropic_api_key` are entered with hidden
+input and passed straight to `terraform apply -var` — neither is ever written to disk. The other
+eight are non-secret and get saved to `terraform.tfvars` (gitignored), so the next run offers them
+back as defaults instead of asking from scratch. Any of the ten can also come from the environment
+instead of a prompt (see `./scripts/deploy-from-env.sh` below) — whichever are already set are used
+as-is, only what's missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh
 <do_infra> <do_api> <do_app> <do_demo_api> <do_roxy_gateway>` (each `true`/`false`, all default
 `true`).
 
@@ -114,14 +119,15 @@ cd infra
 ```
 
 For a non-interactive run (CI, or just avoiding retyping things), `./scripts/deploy-from-env.sh`
-reads `mongo_uri`/`vpc_id`/`subnet_id`/`evaluator_url`/`dashboard_url`/`acm_certificate_arn`/`domain_aliases`
-from an `.env` file and exports them, so `deploy.sh` finds them already set and skips every prompt.
-`mongo_uri`, `vpc_id`, `subnet_id`, and `evaluator_url` are required in `.env`; the other three stay
-optional:
+reads `mongo_uri`/`anthropic_api_key`/`vpc_id`/`subnet_id`/`evaluator_url`/`dashboard_url`/
+`anthropic_model`/`anthropic_base_url`/`acm_certificate_arn`/`domain_aliases` from an `.env` file
+and exports them, so `deploy.sh` finds them already set and skips every prompt. `mongo_uri`,
+`vpc_id`, `subnet_id`, `evaluator_url`, and `anthropic_api_key` are required in `.env`; the rest
+stay optional:
 
 ```bash
 cd infra
-cp .env.example .env   # fill in MONGO_URI, VPC_ID, SUBNET_ID, EVALUATOR_URL (others optional)
+cp .env.example .env   # fill in MONGO_URI, VPC_ID, SUBNET_ID, EVALUATOR_URL, ANTHROPIC_API_KEY (others optional)
 ./scripts/deploy-from-env.sh
 ```
 
@@ -130,10 +136,10 @@ To run Terraform yourself instead:
 ```bash
 cd infra
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars: set vpc_id, subnet_id, evaluator_url (and optionally dashboard_url, acm_certificate_arn, domain_aliases)
+# edit terraform.tfvars: set vpc_id, subnet_id, evaluator_url (and optionally dashboard_url, anthropic_model, anthropic_base_url, acm_certificate_arn, domain_aliases)
 
 terraform init
-terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
+terraform apply -var="mongo_uri=mongodb://user:password@host:27017" -var="anthropic_api_key=sk-ant-xxxxxxxx"
 ```
 
 This provisions the bucket, CloudFront distribution, all three ECR repos, and the ECS
@@ -218,12 +224,12 @@ boots and the tasks get placed.
 - **Secrets**: `mongo_uri` is stored in SSM Parameter Store (`SecureString`, free) and injected into
   the dashboard API and demo-api containers via the task definition's `secrets` field, so the
   plaintext value never sits in their task definitions — only in SSM, access-controlled separately.
-  roxy-gateway's container gets `mongo_uri` as a plain `environment` value instead (by request) —
-  simpler, but that means the plaintext value sits in every revision of that one task definition,
-  visible to anyone with `ecs:DescribeTaskDefinition`. Either way it still lands in Terraform state
-  in plaintext, as with any Terraform-managed secret; the state bucket is encrypted and not
-  publicly accessible, but anyone with read access to it can read this value — scope IAM access to
-  that bucket accordingly.
+  roxy-gateway's container gets both `mongo_uri` and `anthropic_api_key` as plain `environment`
+  values instead (by request) — simpler, but that means the plaintext values sit in every revision
+  of that one task definition, visible to anyone with `ecs:DescribeTaskDefinition`. Either way it
+  still lands in Terraform state in plaintext, as with any Terraform-managed secret; the state
+  bucket is encrypted and not publicly accessible, but anyone with read access to it can read these
+  values — scope IAM access to that bucket accordingly.
 - **SSH**: off by default. Set `key_pair_name` (an existing EC2 key pair) and `ssh_ingress_cidr`
   (your IP, not `0.0.0.0/0`) in `terraform.tfvars` if you need shell access — or use AWS Systems
   Manager Session Manager instead (the instance role already has `AmazonSSMManagedInstanceCore`),

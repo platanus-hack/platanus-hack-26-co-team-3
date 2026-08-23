@@ -77,6 +77,24 @@ variable "evaluator_url" {
   type        = string
 }
 
+variable "anthropic_api_key" {
+  description = "Anthropic API key roxy-gateway uses to call Claude (the agent that decides how to invoke the MCP tool). Required by roxy-gateway's own config — it refuses to start without it. Passed as a plain environment variable, not SSM — same as mongo_uri for this service."
+  type        = string
+  sensitive   = true
+}
+
+variable "anthropic_model" {
+  description = "Anthropic model roxy-gateway calls. Matches roxy-gateway's own config.go default."
+  type        = string
+  default     = "claude-sonnet-5"
+}
+
+variable "anthropic_base_url" {
+  description = "Anthropic API base URL. Matches roxy-gateway's own config.go default."
+  type        = string
+  default     = "https://api.anthropic.com"
+}
+
 variable "dashboard_url" {
   description = "URL roxy-gateway POSTs security log notifications to (dashboard API's POST /log). Defaults to the dashboard API over localhost, since both containers share the same EC2 instance (host networking) — no CloudFront/internet round-trip needed. Optional: roxy-gateway no-ops the notification if this is empty."
   type        = string

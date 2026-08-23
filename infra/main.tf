@@ -496,7 +496,10 @@ resource "aws_ecs_task_definition" "roxy_gateway" {
       { name = "MONGO_DB_NAME", value = var.mongo_db },
       { name = "EVALUATOR_URL", value = var.evaluator_url },
       { name = "DASHBOARD_URL", value = var.dashboard_url },
+      { name = "ANTHROPIC_MODEL", value = var.anthropic_model },
+      { name = "ANTHROPIC_BASE_URL", value = var.anthropic_base_url },
       { name = "MONGO_URI", value = var.mongo_uri },
+      { name = "ANTHROPIC_API_KEY", value = var.anthropic_api_key },
     ]
     logConfiguration = {
       logDriver = "awslogs"
