@@ -4,10 +4,18 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import DESCENDING
+from pymongo import DESCENDING, ReturnDocument
 
 from db import get_agents_collection, get_security_collection
-from models import Agent, AgentCreate, SecurityLog, SecurityLogCreate, SecurityStatus, Session
+from models import (
+    Agent,
+    AgentCreate,
+    AgentOutcomeUpdate,
+    SecurityLog,
+    SecurityLogCreate,
+    SecurityStatus,
+    Session,
+)
 
 app = FastAPI(title="Roxy Dashboard API")
 
@@ -92,6 +100,28 @@ def create_agent(payload: AgentCreate):
     return Agent.model_validate(doc)
 
 
+@app.patch("/agents/{agent_id}", response_model=Agent)
+def update_agent_outcome(agent_id: str, payload: AgentOutcomeUpdate):
+    try:
+        object_id = ObjectId(agent_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="agent_id is not a valid ObjectId")
+
+    collection = get_agents_collection()
+    doc = collection.find_one_and_update(
+        {"_id": object_id},
+        {"$set": {"outcome": payload.outcome.value}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if doc is None:
+        raise HTTPException(status_code=404, detail="agent not found")
+
+    doc["_id"] = str(doc["_id"])
+    if doc.get("parentId") is not None:
+        doc["parentId"] = str(doc["parentId"])
+    return Agent.model_validate(doc)
+
+
 @app.get("/agents", response_model=list[Agent])
 def list_agents_by_session(session_id: str = Query(alias="sessionId")):
     collection = get_agents_collection()
@@ -120,14 +150,18 @@ def list_sessions(limit: int = Query(default=50, ge=1, le=500)):
                 # so within a session group the earliest _id is the root.
                 "rootPurpose": {"$first": "$purpose"},
                 "rootId": {"$first": "$_id"},
+                "outcomes": {"$push": "$outcome"},
             }
         },
         {"$sort": {"rootId": -1}},
         {"$limit": limit},
     ]
 
+    outcome_rank = {"error": 2, "denied": 1, "ok": 0}
     sessions = []
     for doc in collection.aggregate(pipeline):
+        recorded = [o for o in doc["outcomes"] if o is not None]
+        worst = max(recorded, key=lambda o: outcome_rank.get(o, -1)) if recorded else None
         sessions.append(
             Session.model_validate(
                 {
@@ -135,6 +169,7 @@ def list_sessions(limit: int = Query(default=50, ge=1, le=500)):
                     "rootPurpose": doc["rootPurpose"],
                     "agentCount": doc["agentCount"],
                     "startedAt": doc["rootId"].generation_time,
+                    "outcome": worst,
                 }
             )
         )
