@@ -1,6 +1,6 @@
-import { GridIcon, ListIcon } from './icons'
+import { AgentsNavIcon, GridIcon, ListIcon } from './icons'
 
-export type View = 'overview' | 'logs'
+export type View = 'overview' | 'logs' | 'agents'
 
 interface SidebarProps {
   view: View
@@ -31,6 +31,14 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
         >
           <ListIcon />
           Logs
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${view === 'agents' ? 'active' : ''}`}
+          onClick={() => onNavigate('agents')}
+        >
+          <AgentsNavIcon />
+          Agents
         </button>
       </div>
 

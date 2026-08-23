@@ -10,6 +10,12 @@ class SecurityStatus(str, Enum):
     denied = "denied"
 
 
+class AgentOutcome(str, Enum):
+    ok = "ok"
+    denied = "denied"
+    error = "error"
+
+
 class ViolatedRule(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -51,6 +57,10 @@ class Agent(BaseModel):
     purpose: str
     parent_id: Optional[str] = Field(default=None, alias="parentId")
     session_id: str = Field(alias="sessionId")
+    # Not written by agent_flow yet (see agents_client.py / orchestrator.py) --
+    # None means "no verdict recorded", not "succeeded". Nullable so existing
+    # writers (POST /agents without this field) keep working unchanged.
+    outcome: Optional[AgentOutcome] = None
 
 
 class AgentCreate(BaseModel):
@@ -59,3 +69,29 @@ class AgentCreate(BaseModel):
     purpose: str
     parent_id: Optional[str] = Field(default=None, alias="parentId")
     session_id: str = Field(alias="sessionId")
+    outcome: Optional[AgentOutcome] = None
+
+
+class AgentOutcomeUpdate(BaseModel):
+    outcome: AgentOutcome
+
+
+class Session(BaseModel):
+    """One row per distinct `sessionId` in `agents`, aggregated server-side.
+
+    `startedAt` isn't a stored field anywhere -- `agents` has no timestamp
+    at all -- it's the real creation time embedded in the root agent's
+    ObjectId (the first-inserted doc per session, since agent_flow always
+    registers the orchestrator/root before any child). Not invented data,
+    just read out of the id Mongo already assigned.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    session_id: str = Field(alias="sessionId")
+    root_purpose: str = Field(alias="rootPurpose")
+    agent_count: int = Field(alias="agentCount")
+    started_at: datetime = Field(alias="startedAt")
+    # Worst outcome (error > denied > ok) across the session's agents, or
+    # None if none of them have a recorded outcome yet.
+    outcome: Optional[AgentOutcome] = None

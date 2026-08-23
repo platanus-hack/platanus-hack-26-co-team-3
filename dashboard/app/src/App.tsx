@@ -5,6 +5,7 @@ import { Sidebar, type View } from './components/Sidebar'
 import { LogDrawer } from './components/LogDrawer'
 import { Overview } from './views/Overview'
 import { Logs } from './views/Logs'
+import { Agents } from './views/Agents'
 
 function App() {
   const [view, setView] = useState<View>('overview')
@@ -29,6 +30,7 @@ function App() {
       {status === 'error' && <div className="state-message">Couldn't reach the dashboard API.</div>}
       {status === 'ready' && view === 'overview' && <Overview logs={logs} onSelect={setSelected} />}
       {status === 'ready' && view === 'logs' && <Logs logs={logs} onSelect={setSelected} />}
+      {view === 'agents' && <Agents />}
 
       <LogDrawer log={selected} onClose={() => setSelected(null)} />
     </div>
