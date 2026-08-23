@@ -7,12 +7,11 @@ Uso:
 """
 import argparse
 import json
-import os
 import sys
 
 import requests
 
-DEMO_API_URL = os.environ.get("DEMO_API_URL", "http://localhost:8001")
+from agent_flow import config
 
 TASK = (
     "Concilia todas las facturas 'issued': revisa si hay notas del cliente "
@@ -22,7 +21,7 @@ TASK = (
 
 
 def _get_consistency() -> dict:
-    resp = requests.get(f"{DEMO_API_URL}/health/consistency", timeout=10)
+    resp = requests.get(f"{config.DEMO_API_URL}/health/consistency", timeout=10)
     return resp.json()
 
 
@@ -59,12 +58,13 @@ def main():
     parser.add_argument("--roxy", choices=["on", "off"], default="off")
     args = parser.parse_args()
 
-    # Tiene que fijarse antes de importar agent_flow.config, que lee el env
-    # una sola vez al cargar el modulo.
-    os.environ["ROXY_ENABLED"] = "true" if args.roxy == "on" else "false"
-
-    from agent_flow import config, preflight, seed_injection
+    from agent_flow import preflight, seed_injection
     from agent_flow.orchestrator import run_task
+
+    # La flag manda sobre el env: fijarla via os.environ obligaba a que
+    # config se importara despues, y un import de mas arriba en el archivo
+    # bastaba para que --roxy on corriera sin Roxy en silencio.
+    config.ROXY_ENABLED = args.roxy == "on"
 
     if not config.ANTHROPIC_API_KEY:
         sys.exit("ANTHROPIC_API_KEY no esta seteado (agent-flow-demo/.env)")
@@ -72,13 +72,13 @@ def main():
     print(f"=== Corrida con Roxy {'ON' if config.ROXY_ENABLED else 'OFF'} ===\n")
 
     problema = preflight.report(
-        preflight.run_all(DEMO_API_URL, with_roxy=config.ROXY_ENABLED)
+        preflight.run_all(config.DEMO_API_URL, with_roxy=config.ROXY_ENABLED)
     )
     if problema:
         sys.exit(problema)
 
     print("Reseteando demo-api a datos limpios...")
-    requests.post(f"{DEMO_API_URL}/admin/reset", timeout=10)
+    requests.post(f"{config.DEMO_API_URL}/admin/reset", timeout=10)
 
     print("Inyectando notas de cliente (INV-1005 maliciosa, INV-1011 legitima)...")
     seed_injection.apply()
