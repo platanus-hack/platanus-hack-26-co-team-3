@@ -1,28 +1,35 @@
 :root {
+  /* Mismos tokens que landing-page/index.html: monocromo, el color lo pone
+     el logo y los estados (verde aprobado, rojo denegado). */
   --bg: #fff;
   --panel: #fafafa;
-  --text: #6b6375;
-  --text-h: #08060d;
-  --text-muted: #948e9c;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --green: #16a34a;
-  --green-bg: rgba(22, 163, 74, 0.1);
-  --green-border: rgba(22, 163, 74, 0.3);
-  --red: #dc2626;
-  --red-bg: rgba(220, 38, 38, 0.07);
-  --red-border: rgba(220, 38, 38, 0.32);
+  --text: #525252;
+  --text-h: #0a0a0a;
+  --text-muted: #8a8a8a;
+  --border: #e4e4e4;
+  --code-bg: #fafafa;
+  --accent: #0a0a0a;
+  --accent-bg: #f4f4f4;
+  --accent-border: #c8c8c8;
+  --on-accent: #fff;
+  --green: #15803d;
+  --green-bg: rgba(21, 128, 61, 0.08);
+  --green-border: rgba(21, 128, 61, 0.3);
+  --red: #c0392b;
+  --red-bg: rgba(192, 57, 43, 0.07);
+  --red-border: rgba(192, 57, 43, 0.3);
+  --held: #b45309;
+  --held-bg: rgba(180, 83, 9, 0.08);
+  --held-border: rgba(180, 83, 9, 0.35);
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.08) 0 10px 30px -12px, rgba(0, 0, 0, 0.04) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --display: 'Space Grotesk', var(--sans);
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-  font: 16px/145% var(--sans);
-  letter-spacing: 0.1px;
+  font: 16px/1.55 var(--sans);
+  letter-spacing: 0;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -34,24 +41,28 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16171d;
-    --panel: #1c1d24;
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --text-muted: #6b7280;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
+    --bg: #0a0a0b;
+    --panel: #131315;
+    --text: #a1a1a6;
+    --text-h: #fafafa;
+    --text-muted: #6f6f76;
+    --border: #26262a;
+    --code-bg: #131315;
+    --accent: #fafafa;
+    --accent-bg: #1c1c1f;
+    --accent-border: #3a3a40;
+    --on-accent: #0a0a0b;
     --green: #4ade80;
     --green-bg: rgba(74, 222, 128, 0.1);
     --green-border: rgba(74, 222, 128, 0.28);
     --red: #f87171;
     --red-bg: rgba(248, 113, 113, 0.1);
     --red-border: rgba(248, 113, 113, 0.28);
+    --held: #fbbf24;
+    --held-bg: rgba(251, 191, 36, 0.11);
+    --held-border: rgba(251, 191, 36, 0.32);
     --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      rgba(0, 0, 0, 0.5) 0 10px 30px -12px, rgba(0, 0, 0, 0.3) 0 4px 6px -2px;
   }
 
   .brand-logo {
@@ -68,12 +79,16 @@ body { margin: 0; }
   min-height: 100vh;
 }
 
-h1, h2 {
-  font-family: var(--sans);
-  font-weight: 600;
+h1, h2, h3 {
+  font-family: var(--display);
+  font-weight: 700;
   color: var(--text-h);
   margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
+
+h1 { font-size: 34px; }
 
 p { margin: 0; }
 
@@ -139,8 +154,9 @@ code {
 }
 
 .brand-name {
-  font-family: 'Abril Fatface', Georgia, 'Times New Roman', serif;
-  font-size: 23px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
   line-height: 1;
   color: var(--text-h);
   letter-spacing: 0.2px;
@@ -170,7 +186,7 @@ code {
 }
 
 .nav-item:hover { background: var(--panel); color: var(--text-h); }
-.nav-item.active { background: var(--accent-bg); color: var(--accent); }
+.nav-item.active { background: var(--accent-bg); color: var(--text-h); font-weight: 600; }
 
 .live-pill {
   display: flex;
@@ -738,7 +754,7 @@ code {
   border: 1px solid;
 }
 
-.graph-chip.denied { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-border); }
+.graph-chip.denied { color: var(--held); background: var(--held-bg); border-color: var(--held-border); }
 .graph-chip.error  { color: var(--red);    background: var(--red-bg);    border-color: var(--red-border); }
 .graph-chip.clean  { color: var(--green);  background: var(--green-bg);  border-color: var(--green-border); }
 
@@ -826,7 +842,7 @@ code {
   background: var(--accent-bg);
 }
 
-.graph-node-card.outcome-denied { border-color: var(--accent-border); background: var(--accent-bg); }
+.graph-node-card.outcome-denied { border-color: var(--held-border); background: var(--held-bg); }
 .graph-node-card.outcome-error  { border-color: var(--red-border);    background: var(--red-bg); }
 .graph-node-card.outcome-ok     { border-color: var(--green-border); }
 
@@ -846,14 +862,14 @@ code {
 
 @keyframes pulse-ring-red {
   0%   { box-shadow: 0 0 0 0 var(--red-border); }
-  70%  { box-shadow: 0 0 0 11px rgba(220, 38, 38, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  70%  { box-shadow: 0 0 0 11px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 @keyframes pulse-ring-accent {
-  0%   { box-shadow: 0 0 0 0 var(--accent-border); }
-  70%  { box-shadow: 0 0 0 11px rgba(170, 59, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(170, 59, 255, 0); }
+  0%   { box-shadow: 0 0 0 0 var(--held-border); }
+  70%  { box-shadow: 0 0 0 11px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 @keyframes node-reveal {

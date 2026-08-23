@@ -99,7 +99,7 @@ export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: 
   if (agents.length === 0) {
     return (
       <div className="agents-canvas">
-        <div className="empty-state">No agents recorded for this run yet.</div>
+        <div className="empty-state">Todavía no hay agentes en esta corrida.</div>
       </div>
     )
   }
@@ -108,20 +108,20 @@ export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: 
     <div className="agents-canvas">
       <div className="graph-toolbar">
         <div className="graph-summary">
-          <span className="graph-summary-main">{agents.length} agents</span>
+          <span className="graph-summary-main">{agents.length} agentes</span>
           {counts.denied > 0 && (
-            <span className="graph-chip denied">{counts.denied} blocked by Roxy</span>
+            <span className="graph-chip denied">{counts.denied} bloqueadas por Roxy</span>
           )}
-          {counts.errored > 0 && <span className="graph-chip error">{counts.errored} failed</span>}
+          {counts.errored > 0 && <span className="graph-chip error">{counts.errored} fallaron</span>}
           {counts.denied === 0 && counts.errored === 0 && (
-            <span className="graph-chip clean">nothing blocked</span>
+            <span className="graph-chip clean">nada bloqueado</span>
           )}
         </div>
         <button
           type="button"
           className="replay-btn"
           onClick={() => setReplayKey((k) => k + 1)}
-          title="Replay the reveal in the order the agents actually ran"
+          title="Reproduce la aparición en el orden real en que corrieron"
         >
           <ReplayIcon />
           Replay
@@ -193,7 +193,7 @@ export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: 
                 onClick={() => onSelectAgent(agent._id)}
               >
                 <span className="graph-node-role">
-                  {isRoot ? 'Orchestrator' : `Depth ${agent.depth}`}
+                  {isRoot ? 'Orquestador' : `Nivel ${agent.depth}`}
                 </span>
                 <span className="graph-node-purpose">{agent.purpose}</span>
                 {agent.outcome && (

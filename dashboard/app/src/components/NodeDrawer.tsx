@@ -45,8 +45,8 @@ export function NodeDrawer({ agent, agents, decisions, onClose, onSelectAgent }:
           {decisions.length > 0 && (
             <div className="drawer-field">
               <div className="drawer-field-label">
-                What Roxy decided &middot; {decisions.length}{' '}
-                {decisions.length === 1 ? 'decision' : 'decisions'}
+                Qué decidió Roxy &middot; {decisions.length}{' '}
+                {decisions.length === 1 ? 'decisión' : 'decisiones'}
               </div>
               <div className="decision-list">
                 {decisions.map((log) => {
@@ -54,14 +54,14 @@ export function NodeDrawer({ agent, agents, decisions, onClose, onSelectAgent }:
                   return (
                     <div key={log._id} className={`decision-card ${denied ? 'denied' : 'approved'}`}>
                       <div className="decision-top">
-                        <span className="decision-verdict">{denied ? 'Blocked' : 'Allowed'}</span>
+                        <span className="decision-verdict">{denied ? 'Bloqueada' : 'Aprobada'}</span>
                         <span className="decision-time mono">{formatFullTime(log.time)}</span>
                       </div>
                       <div className="decision-reason">{log.description}</div>
                       {log.violatedRule && (
                         <div className="decision-rule">
                           <span className="decision-rule-priority">
-                            Rule {log.violatedRule.priority}
+                            Regla {log.violatedRule.priority}
                           </span>
                           {log.violatedRule.instruction}
                         </div>
@@ -76,7 +76,7 @@ export function NodeDrawer({ agent, agents, decisions, onClose, onSelectAgent }:
 
           {chain.length > 1 && (
             <div className="drawer-field">
-              <div className="drawer-field-label">Who asked for this</div>
+              <div className="drawer-field-label">Quién pidió esto</div>
               <div className="breadcrumb-list">
                 {chain.map((id, i) => {
                   const node = byId.get(id)
@@ -99,11 +99,11 @@ export function NodeDrawer({ agent, agents, decisions, onClose, onSelectAgent }:
           )}
 
           <div className="drawer-field">
-            <div className="drawer-field-label">Agent ID</div>
+            <div className="drawer-field-label">ID del agente</div>
             <div className="drawer-field-value mono muted">{agent._id}</div>
           </div>
           <div className="drawer-field">
-            <div className="drawer-field-label">Run</div>
+            <div className="drawer-field-label">Corrida</div>
             <div className="drawer-field-value mono muted">{agent.sessionId}</div>
           </div>
         </div>

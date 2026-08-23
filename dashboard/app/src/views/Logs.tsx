@@ -32,14 +32,14 @@ export function Logs({ logs, onSelect }: LogsProps) {
 
   function pillStyle(value: StatusFilter) {
     return value === statusFilter
-      ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }
+      ? { background: 'var(--accent)', color: 'var(--on-accent)', borderColor: 'var(--accent)' }
       : { background: 'transparent', color: 'var(--text)', borderColor: 'var(--border)' }
   }
 
   return (
     <div className="view-content">
       <div>
-        <h1>Logs</h1>
+        <h1>Decisiones</h1>
         <p className="subtitle">
           Cada decisión que tomó Roxy &mdash; {logs.length} en total, {deniedCount} bloqueadas.
         </p>

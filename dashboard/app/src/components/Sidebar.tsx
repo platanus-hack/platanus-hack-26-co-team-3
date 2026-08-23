@@ -38,7 +38,7 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
           onClick={() => onNavigate('overview')}
         >
           <GridIcon />
-          Overview
+          Panorama
         </button>
         <button
           type="button"
@@ -46,7 +46,7 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
           onClick={() => onNavigate('logs')}
         >
           <ListIcon />
-          Logs
+          Decisiones
         </button>
         <button
           type="button"
@@ -54,7 +54,7 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
           onClick={() => onNavigate('agents')}
         >
           <AgentsNavIcon />
-          Agents
+          Agentes
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
 
       <div className="live-pill">
         <span className="live-dot" />
-        <span>Monitoring live</span>
+        <span>En vivo</span>
       </div>
     </nav>
   )

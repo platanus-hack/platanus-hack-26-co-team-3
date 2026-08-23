@@ -47,9 +47,9 @@ function App() {
 
       {/* Only Overview and Logs are blocked on the security-log fetch; Live and
           Agents load their own data and must not sit behind it. */}
-      {needsLogs && status === 'loading' && <div className="state-message">Loading logs…</div>}
+      {needsLogs && status === 'loading' && <div className="state-message">Cargando decisiones…</div>}
       {needsLogs && status === 'error' && (
-        <div className="state-message">Couldn't reach the dashboard API.</div>
+        <div className="state-message">No se pudo alcanzar la API del dashboard.</div>
       )}
       {status === 'ready' && view === 'overview' && <Overview logs={logs} onSelect={setSelected} />}
       {status === 'ready' && view === 'logs' && <Logs logs={logs} onSelect={setSelected} />}

@@ -115,9 +115,9 @@ export function Agents({ logs }: AgentsProps) {
     <div className="view-content agents-view">
       <div className="agents-head">
         <div>
-          <h1>Agents</h1>
+          <h1>Agentes</h1>
           <p className="subtitle">
-            Every agent a run spawned, who spawned it, and where Roxy stepped in.
+            Cada agente que lanzó una corrida, quién lo lanzó, y dónde intervino Roxy.
           </p>
         </div>
         <button
@@ -126,18 +126,18 @@ export function Agents({ logs }: AgentsProps) {
           onClick={() => setFollowing((f) => !f)}
           title={
             following
-              ? 'Jumping to each new run as it starts'
-              : 'Staying on the run you picked'
+              ? 'Salta a cada corrida nueva apenas arranca'
+              : 'Se queda en la corrida que elegiste'
           }
         >
           <span className={`follow-dot ${following ? 'live' : ''}`} />
-          {following ? 'Following live' : 'Paused'}
+          {following ? 'Siguiendo en vivo' : 'Pausado'}
         </button>
       </div>
 
-      {sessionsStatus === 'loading' && <div className="state-message">Loading runs&hellip;</div>}
+      {sessionsStatus === 'loading' && <div className="state-message">Cargando corridas&hellip;</div>}
       {sessionsStatus === 'error' && (
-        <div className="state-message">Couldn't reach the dashboard API.</div>
+        <div className="state-message">No se pudo alcanzar la API.</div>
       )}
 
       {sessionsStatus === 'ready' && (
@@ -149,10 +149,10 @@ export function Agents({ logs }: AgentsProps) {
           />
 
           {agentsStatus === 'loading' && (
-            <div className="agents-canvas state-message">Loading agents&hellip;</div>
+            <div className="agents-canvas state-message">Cargando agentes&hellip;</div>
           )}
           {agentsStatus === 'error' && (
-            <div className="agents-canvas state-message">Couldn't load this run's agents.</div>
+            <div className="agents-canvas state-message">No se pudieron cargar los agentes de esta corrida.</div>
           )}
           {agentsStatus === 'ready' && (
             <AgentGraph
