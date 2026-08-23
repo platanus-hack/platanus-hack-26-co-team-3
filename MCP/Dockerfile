@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+ENV MDB_MCP_CONNECTION_STRING=""
+ENV MDB_MCP_TRANSPORT=http
+ENV MDB_MCP_HTTP_PORT=3000
+
+EXPOSE 3000
+
+CMD ["npx", "-y", "mongodb-mcp-server"]

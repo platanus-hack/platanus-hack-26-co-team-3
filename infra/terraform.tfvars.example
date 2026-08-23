@@ -6,10 +6,13 @@ evaluator_url = "https://your-evaluator-host/evaluate" # block 10 "verifier"; ro
 # domain_aliases      = ["roxygt.lat", "www.roxygt.lat"]  # needs acm_certificate_arn set too
 # mongo_db            = "roxy"
 # dashboard_url       = "http://localhost:8000/log"  # default; same-instance, no need to change
+# anthropic_model     = "claude-sonnet-5"        # default; roxy-gateway's own fallback
+# anthropic_base_url  = "https://api.anthropic.com"  # default; roxy-gateway's own fallback
 # key_pair_name       = "my-key-pair"
 # ssh_ingress_cidr    = "203.0.113.4/32"
 
-# mongo_uri is NOT set here on purpose — it's a secret. Either:
-#  - run ./scripts/deploy.sh, which prompts for it (hidden input) and passes it
-#    straight to `terraform apply -var`, never writing it to disk, or
-#  - run terraform yourself with `-var="mongo_uri=..."` or a TF_VAR_mongo_uri env var.
+# mongo_uri and anthropic_api_key are NOT set here on purpose — they're secrets. Either:
+#  - run ./scripts/deploy.sh, which prompts for both (hidden input) and passes them
+#    straight to `terraform apply -var`, never writing them to disk, or
+#  - run terraform yourself with `-var="mongo_uri=..." -var="anthropic_api_key=..."` or
+#    TF_VAR_mongo_uri / TF_VAR_anthropic_api_key env vars.

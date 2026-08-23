@@ -53,6 +53,25 @@ output "roxy_gateway_base_url" {
   value       = "/gateway"
 }
 
+output "mcp_server_ecs_service_name" {
+  value = aws_ecs_service.mcp_server.name
+}
+
+output "mcp_server_url" {
+  description = "Internal URL for the self-hosted MCP server, reachable from roxy-gateway (or anything else on this instance) over localhost. Use this as an MCP's server.url in Mongo."
+  value       = "http://localhost:8003/mcp"
+}
+
+output "mcp_server_public_url" {
+  description = "Public URL for the self-hosted MCP server, through CloudFront (e.g. https://<site_url>/mcp)."
+  value       = "/mcp"
+}
+
+output "demo_api_base_url" {
+  description = "Path demo-api is served under through CloudFront (e.g. https://<site_url>/demo-api/invoices)."
+  value       = "/demo-api"
+}
+
 output "aws_region" {
   value = var.aws_region
 }

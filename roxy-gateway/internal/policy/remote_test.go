@@ -25,7 +25,7 @@ func fixtureMCP() mcp.MCP {
 	}
 }
 
-func TestRemoteClient_Evaluate_sendsContextWithoutCredentials(t *testing.T) {
+func TestRemoteClient_Evaluate_sendsRulesAndPromptWithoutCredentials(t *testing.T) {
 	t.Parallel()
 	id := primitive.NewObjectID()
 	var gotBody map[string]any
@@ -52,6 +52,7 @@ func TestRemoteClient_Evaluate_sendsContextWithoutCredentials(t *testing.T) {
 			},
 			Rules: []mcp.Rule{
 				{Priority: 1, Instruction: "deny any write operation outside working hours"},
+				{Priority: 2, Instruction: "allow read-only queries on the 'orders' collection"},
 			},
 		},
 		AccessedBy: "agent-subtask-07",
@@ -66,12 +67,17 @@ func TestRemoteClient_Evaluate_sendsContextWithoutCredentials(t *testing.T) {
 
 	raw, _ := json.Marshal(gotBody)
 	require.NotContains(t, string(raw), "secret-must-not-leak")
-	mcpObj := gotBody["mcp"].(map[string]any)
-	require.Equal(t, id.Hex(), mcpObj["id"])
-	require.Equal(t, "mongo-catalog-mcp", mcpObj["name"])
-	req := gotBody["request"].(map[string]any)
-	require.Equal(t, "drop_table", req["action"])
-	require.Equal(t, "agent-subtask-07", req["accessedBy"])
+	require.NotContains(t, string(raw), "priority")
+	require.NotContains(t, string(raw), id.Hex())
+	require.Equal(t, []any{
+		"deny any write operation outside working hours",
+		"allow read-only queries on the 'orders' collection",
+	}, gotBody["rules"])
+	require.Equal(t, "drop_table: DROP TABLE orders", gotBody["prompt"])
+	_, hasMCP := gotBody["mcp"]
+	require.False(t, hasMCP)
+	_, hasRequest := gotBody["request"]
+	require.False(t, hasRequest)
 }
 
 func TestRemoteClient_Evaluate_allow(t *testing.T) {
@@ -103,4 +109,27 @@ func TestRemoteClient_Evaluate_non2xx(t *testing.T) {
 	client := NewRemoteClient(srv.URL)
 	_, err := client.Evaluate(context.Background(), Input{MCP: fixtureMCP(), Action: "read"})
 	require.ErrorIs(t, err, ErrUnavailable)
+}
+
+func TestAgentPrompt(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		action  string
+		payload string
+		want    string
+	}{
+		{name: "intent with action", action: "drop_table", payload: `{"intent":"DROP TABLE orders"}`, want: "drop_table: DROP TABLE orders"},
+		{name: "payload prompt wins", action: "read", payload: `{"prompt":"list orders","intent":"ignored"}`, want: "list orders"},
+		{name: "json string payload", action: "read", payload: `"show me paid orders"`, want: "read: show me paid orders"},
+		{name: "action only", action: "read", payload: "", want: "read"},
+		{name: "null payload", action: "read", payload: "null", want: "read"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := agentPrompt(tt.action, []byte(tt.payload))
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

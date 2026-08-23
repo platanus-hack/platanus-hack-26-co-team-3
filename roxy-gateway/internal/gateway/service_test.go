@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -91,6 +92,27 @@ func catalogMCP() *mcp.MCP {
 			{Priority: 1, Instruction: "deny any write operation outside working hours"},
 		},
 	}
+}
+
+func TestService_Evaluate_wrapsCallMCPError(t *testing.T) {
+	t.Parallel()
+	svc := New(
+		fakeFinder{doc: catalogMCP()},
+		&fakeLogs{},
+		fakeEvaluator{result: policy.Result{Allowed: true, Reason: "ok"}},
+		&fakeNotifier{},
+		&fakeAgent{err: fmt.Errorf("%w: model did not call the MCP", policy.ErrPlan)},
+	)
+	_, err := svc.Evaluate(context.Background(), EvaluateRequest{
+		MCPName:    "mongo-catalog-mcp",
+		AccessedBy: "agent-orchestrator-01",
+		Action:     "read",
+		Payload:    []byte(`{"intent":"find invoices"}`),
+	})
+	require.ErrorIs(t, err, policy.ErrPlan)
+	require.Contains(t, err.Error(), "CallMCP")
+	require.Contains(t, err.Error(), "https://mcp.internal/mongo-catalog")
+	require.Contains(t, err.Error(), "auth=bearer")
 }
 
 func TestService_Evaluate(t *testing.T) {

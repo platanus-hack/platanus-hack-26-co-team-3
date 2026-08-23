@@ -100,5 +100,3 @@ The Roxy dashboard provides an interactive panel for users to see (for now one u
 10. [ ] Capa de verificación - **Sebastian**
     - [ ] Traducir lenguaje natural (componentes de contexto y reglas) a lenguaje para Z3
     - [ ] Verificar con Z3 la lógica de que el contexto se encuentre correspondiente a las reglas
-
-

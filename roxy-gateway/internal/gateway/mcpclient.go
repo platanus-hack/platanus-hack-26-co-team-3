@@ -7,11 +7,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"roxy-gateway/internal/mcp"
 	"roxy-gateway/internal/policy"
 )
+
+const mcpProtocolVersion = "2025-06-18"
 
 type MCPCaller interface {
 	Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) (Upstream, error)
@@ -20,15 +23,20 @@ type MCPCaller interface {
 type Upstream struct {
 	StatusCode  int
 	ContentType string
+	Header      http.Header
 	Body        []byte
 }
 
 type MCPClient struct {
 	httpClient *http.Client
+	mu         sync.Mutex
+	cachedKey  string
+	cachedTok  string
+	cachedExp  time.Time
 }
 
 func NewMCPClient() *MCPClient {
-	return &MCPClient{httpClient: &http.Client{Timeout: 15 * time.Second}}
+	return &MCPClient{httpClient: &http.Client{Timeout: 45 * time.Second}}
 }
 
 func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) (Upstream, error) {
@@ -46,7 +54,14 @@ func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) 
 	if planHasBody(plan.Body) {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	setAuth(req, doc.Authorization)
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("MCP-Protocol-Version", mcpProtocolVersion)
+	if sid := strings.TrimSpace(plan.SessionID); sid != "" {
+		req.Header.Set("Mcp-Session-Id", sid)
+	}
+	if err := c.setAuth(ctx, req, doc.Authorization); err != nil {
+		return Upstream{}, err
+	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -60,19 +75,31 @@ func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) 
 	return Upstream{
 		StatusCode:  res.StatusCode,
 		ContentType: res.Header.Get("Content-Type"),
+		Header:      res.Header.Clone(),
 		Body:        raw,
 	}, nil
 }
 
-func setAuth(req *http.Request, auth mcp.Authorization) {
-	secret := auth.Credentials
-	if secret == "" {
-		return
+func headerValue(up Upstream, key string) string {
+	if up.Header == nil {
+		return ""
 	}
-	switch strings.ToLower(auth.Type) {
-	case "apikey":
-		req.Header.Set("X-API-Key", secret)
-	default:
-		req.Header.Set("Authorization", "Bearer "+secret)
+	return up.Header.Get(key)
+}
+
+func (c *MCPClient) setAuth(ctx context.Context, req *http.Request, auth mcp.Authorization) error {
+	if strings.EqualFold(auth.Type, "apikey") {
+		if auth.Credentials != "" {
+			req.Header.Set("X-API-Key", auth.Credentials)
+		}
+		return nil
 	}
+	bearer, err := c.resolveBearer(ctx, auth)
+	if err != nil {
+		return err
+	}
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
+	return nil
 }

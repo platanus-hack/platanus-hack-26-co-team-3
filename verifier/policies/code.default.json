@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "payment": {
+    "max_amount": 1000000000,
+    "allowlist": [],
+    "rate_limit": { "max_per_window": 10, "window_secs": 3600 },
+    "reserve_invariant": { "min_reserve": 200000000 }
+  },
+  "code": {
+    "blocked_calls": ["eval", "exec", "os.system", "subprocess", "__import__"],
+    "blocked_imports": ["subprocess", "shutil"],
+    "secret_patterns": ["sk-", "ghp_", "AKIA", "glpat-", "xox"],
+    "require_no_unbounded_loops": true,
+    "sql": { "block_delete_without_where": true, "block_drop": true }
+  }
+}

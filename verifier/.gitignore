@@ -2,3 +2,20 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+# Secrets — never commit
+.env
+.env.*
+*.env
+**/*keypair*.json
+**/id.json
+
+# Rust build
+engine/target/
+
+# Node
+node_modules/
+dist/
+
+# misc
+.z3-trace
+.DS_Store

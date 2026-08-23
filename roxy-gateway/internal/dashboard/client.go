@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"roxy-gateway/internal/mcp"
@@ -31,11 +33,33 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(url string) *Client {
+func NewClient(base string) *Client {
 	return &Client{
-		url:        url,
-		httpClient: &http.Client{Timeout: 2 * time.Second},
+		url:        logEndpoint(base),
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
+}
+
+func logEndpoint(base string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return ""
+	}
+	u, err := url.Parse(base)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		trimmed := strings.TrimRight(base, "/")
+		if strings.HasSuffix(trimmed, "/log") {
+			return trimmed
+		}
+		return trimmed + "/log"
+	}
+	path := strings.TrimRight(u.Path, "/")
+	if !strings.HasSuffix(path, "/log") {
+		u.Path = path + "/log"
+	} else {
+		u.Path = path
+	}
+	return u.String()
 }
 
 func (c *Client) Notify(ctx context.Context, n Notification) error {

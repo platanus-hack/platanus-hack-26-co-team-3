@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"roxy-gateway/internal/mcp"
@@ -27,22 +28,8 @@ func NewRemoteClient(url string) *RemoteClient {
 }
 
 type remoteRequest struct {
-	MCP     remoteMCP     `json:"mcp"`
-	Request remoteAttempt `json:"request"`
-	Time    time.Time     `json:"time"`
-}
-
-type remoteMCP struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Rules       []mcp.Rule `json:"rules"`
-}
-
-type remoteAttempt struct {
-	AccessedBy string          `json:"accessedBy"`
-	Action     string          `json:"action"`
-	Payload    json.RawMessage `json:"payload"`
+	Rules  []string `json:"rules"`
+	Prompt string   `json:"prompt"`
 }
 
 type remoteResponse struct {
@@ -52,23 +39,9 @@ type remoteResponse struct {
 }
 
 func (c *RemoteClient) Evaluate(ctx context.Context, in Input) (Result, error) {
-	payload := json.RawMessage(in.Payload)
-	if len(bytes.TrimSpace(payload)) == 0 {
-		payload = json.RawMessage("null")
-	}
 	body, err := json.Marshal(remoteRequest{
-		MCP: remoteMCP{
-			ID:          in.MCP.ID.Hex(),
-			Name:        in.MCP.Name,
-			Description: in.MCP.Description,
-			Rules:       in.MCP.Rules,
-		},
-		Request: remoteAttempt{
-			AccessedBy: in.AccessedBy,
-			Action:     in.Action,
-			Payload:    payload,
-		},
-		Time: time.Now().UTC(),
+		Rules:  ruleInstructions(in.MCP.Rules),
+		Prompt: agentPrompt(in.Action, in.Payload),
 	})
 	if err != nil {
 		return Result{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
@@ -103,7 +76,58 @@ func (c *RemoteClient) Evaluate(ctx context.Context, in Input) (Result, error) {
 		Reason:  parsed.Reason,
 	}
 	if !parsed.Allowed && parsed.ViolatedPriority != nil {
-		out.ViolatedRule = ruleByPriority(in.MCP.Rules, *parsed.ViolatedPriority)
+		out.ViolatedRule = ruleFromEvaluator(in.MCP.Rules, *parsed.ViolatedPriority)
 	}
 	return out, nil
+}
+
+func ruleInstructions(rules []mcp.Rule) []string {
+	out := make([]string, 0, len(rules))
+	for _, r := range rules {
+		if r.Instruction == "" {
+			continue
+		}
+		out = append(out, r.Instruction)
+	}
+	return out
+}
+
+func agentPrompt(action string, payload []byte) string {
+	action = strings.TrimSpace(action)
+	raw := bytes.TrimSpace(payload)
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return action
+	}
+
+	var asString string
+	if err := json.Unmarshal(raw, &asString); err == nil {
+		return joinPrompt(action, strings.TrimSpace(asString))
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal(raw, &obj); err == nil {
+		if p, ok := obj["prompt"].(string); ok {
+			if p = strings.TrimSpace(p); p != "" {
+				return p
+			}
+		}
+		if p, ok := obj["intent"].(string); ok {
+			if p = strings.TrimSpace(p); p != "" {
+				return joinPrompt(action, p)
+			}
+		}
+	}
+
+	return joinPrompt(action, string(raw))
+}
+
+func joinPrompt(action, detail string) string {
+	switch {
+	case action == "":
+		return detail
+	case detail == "" || detail == action:
+		return action
+	default:
+		return action + ": " + detail
+	}
 }

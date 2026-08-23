@@ -19,9 +19,9 @@ variable "subnet_id" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type running the ECS-managed API container."
+  description = "EC2 instance type running the ECS-managed API containers. t3a.small (2GiB) — the four services' combined hard memory limits (1450MB) need more than t3a.micro's 1GiB."
   type        = string
-  default     = "t3a.micro"
+  default     = "t3a.small"
 }
 
 variable "ssh_ingress_cidr" {
@@ -77,10 +77,34 @@ variable "evaluator_url" {
   type        = string
 }
 
+variable "anthropic_api_key" {
+  description = "Anthropic API key roxy-gateway uses to call Claude (the agent that decides how to invoke the MCP tool). Required by roxy-gateway's own config — it refuses to start without it. Passed as a plain environment variable, not SSM — same as mongo_uri for this service."
+  type        = string
+  sensitive   = true
+}
+
+variable "anthropic_model" {
+  description = "Anthropic model roxy-gateway calls. Matches roxy-gateway's own config.go default."
+  type        = string
+  default     = "claude-sonnet-5"
+}
+
+variable "anthropic_base_url" {
+  description = "Anthropic API base URL. Matches roxy-gateway's own config.go default."
+  type        = string
+  default     = "https://api.anthropic.com"
+}
+
 variable "dashboard_url" {
   description = "URL roxy-gateway POSTs security log notifications to (dashboard API's POST /log). Defaults to the dashboard API over localhost, since both containers share the same EC2 instance (host networking) — no CloudFront/internet round-trip needed. Optional: roxy-gateway no-ops the notification if this is empty."
   type        = string
   default     = "http://localhost:8000/log"
+}
+
+variable "mcp_server_image_tag" {
+  description = "Docker Hub tag of the official mongodb/mongodb-mcp-server image to deploy (self-hosted, no OAuth/Service Account — sidesteps the hosted Atlas Managed MCP Server)."
+  type        = string
+  default     = "latest"
 }
 
 variable "acm_certificate_arn" {

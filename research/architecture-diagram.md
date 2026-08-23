@@ -8,49 +8,52 @@ Se itera a medida que entre más información al `idea.md`.
 
 ```mermaid
 flowchart TB
-    subgraph agents["Bloque 5 — agent-flow-demo (Andrés, no iniciado)"]
-        orch["Orquestador"]
+    subgraph agents["Bloque 5 — agent-flow-demo (Andrés, hecho)"]
+        orch["Orquestador (LangChain)"]
         subOk["Sub-agente legítimo"]
-        subBad["Sub-agente con inyección nociva"]
+        subBad["Sub-agente con nota maliciosa"]
         orch --> subOk
         orch --> subBad
     end
 
-    subgraph interceptor["Bloque 9 — langchain-interceptor (Santiago, no iniciado)"]
-        hook["Callbacks on_chain_start / on_tool_start / on_llm_start"]
+    subgraph sdk["roxy-sdk (Python) — registra el árbol solo, vía callback de LangChain"]
+        cb["Roxy(BaseCallbackHandler)"]
     end
-    orch -. "traza de nodos (planeado, sin contrato aún)" .-> hook
+    orch -. "callback enganchado una vez" .-> cb
+    cb -->|"POST /agents (purpose, parentId, sessionId)"| dapi
 
     subgraph gateway["Bloque 2 — roxy-gateway (Stiven)"]
         rg["POST /v1/evaluate"]
     end
-    subOk -->|"mcpName, accessedBy, action, payload"| rg
+    subOk -->|"mcpName, accessedBy, action, payload\n(header X-Roxy-Agent-Run)"| rg
     subBad -->|"mcpName, accessedBy, action, payload"| rg
 
     subgraph evaluator["Evaluator API (contrato HTTP: EVALUATOR_URL)"]
-        ev["allowed / violatedPriority / reason"]
-        z3["Bloque 10 — verifier (Sebastián)\nZ3 determinista — en construcción"]
-        ev -. "hoy: pluggable / mañana" .-> z3
+        stub["stub_evaluator.py (agent-flow-demo)\nen uso HOY por default"]
+        aegis["Bloque 10 — verifier / Aegis Gate (Sebastián)\nreal, determinista + Z3 opcional + Solana\nNO conectado todavía (mismatch de contrato)"]
     end
-    rg -->|"mcp (rules, server, auth) + request + time"| ev
-    ev -->|veredicto| rg
+    rg -->|"HOY: {rules, prompt}"| stub
+    rg -. "documentado pero no enchufado:\nAegis Gate espera {mcp, request, time}" .-> aegis
+    stub -->|veredicto| rg
 
     subgraph mongoRoxy["Mongo db `roxy` — Bloque 1 (Santiago)"]
         mcps[("mcps: nombre, server.url,\nauthorization, rules")]
         sec[("security: status, mcp,\ntime, accessedBy, description")]
+        agentsCol[("agents: purpose, parentId,\nsessionId, outcome?")]
     end
     rg -->|lee MCP| mcps
     rg -->|log allow/deny| sec
 
-    subgraph dashboard["Bloque 3 — dashboard (Santiago)"]
-        dapi["GET /security-logs"]
-        front["Frontend React"]
+    subgraph dashboard["Bloque 3 — dashboard (Freddy + Santiago)"]
+        dapi["GET/POST /log, /agents\nGET /sessions, PATCH /agents/id"]
+        front["Frontend React\n(Overview, Logs, Agents)"]
         dapi --> front
     end
-    rg -. "POST notify (opcional, DASHBOARD_URL)" .-> front
+    rg -. "POST /log (opcional, DASHBOARD_URL)" .-> dapi
     sec -->|lee logs| dapi
+    agentsCol -->|lee árbol| dapi
 
-    rg -->|"allowed:true → POST server.url\ncon credenciales del MCP"| target["MCP objetivo\n(mock: mongo-catalog / payments / inventory)"]
+    rg -->|"allowed:true → Sonnet 5 planea endpoint/método/body,\nRoxy ejecuta el HTTP con credenciales del MCP"| target["MCP objetivo\n(mock: mongo-catalog / payments / inventory)"]
     rg -->|"allowed:false → 403 sin body"| subBad
 
     subgraph victim["Bloque 4 — demo-api (Freddy, hecho)"]
@@ -63,8 +66,8 @@ flowchart TB
     subBad -. "ataque directo a Mongo\n(escenario 'sin Roxy', bypassea el gateway)" .-> inv
     target -. "en el escenario real de la demo,\neste MCP apunta a demo_billing" .-> inv
 
-    subgraph runner["Bloque 7 — demo/ (Todos, no iniciado)"]
-        run["Orquesta las 3 corridas:\nnormal / agentic sin Roxy / agentic con Roxy"]
+    subgraph runner["Bloque 7 — demo/ (Todos, en progreso)"]
+        run["local-stack.sh: levanta Mongo + demo-api\n+ evaluador + roxy-gateway en orden"]
     end
     run -.-> agents
     run -.-> api
@@ -81,20 +84,25 @@ sequenceDiagram
     participant Mongo as Mongo (roxy)
     participant MCP as MCP objetivo
 
-    Agente->>Roxy: POST /v1/evaluate {mcpName, accessedBy, action, payload}
+    Agente->>Roxy: POST /v1/evaluate {mcpName, accessedBy, action, payload}\n(header X-Roxy-Agent-Run)
     Roxy->>Mongo: lee mcps.{mcpName} (rules, server, auth)
-    Roxy->>Eval: POST {mcp, request, time}
+    Roxy->>Eval: POST {rules, prompt} (HOY: stub_evaluator.py)
     Eval-->>Roxy: {allowed, violatedPriority, reason}
     Roxy->>Mongo: escribe security (status, mcp, time, accessedBy, description)
-    Roxy-->>Dashboard: POST notify (opcional)
+    Roxy-->>Dashboard: POST /log (opcional)
     alt allowed = true
-        Roxy->>MCP: POST server.url (con credenciales del MCP)
+        Roxy->>Roxy: Sonnet 5 planea endpoint/método/body (tool http_request)
+        Roxy->>MCP: HTTP con credenciales del MCP
         MCP-->>Roxy: respuesta cruda
         Roxy-->>Agente: respuesta cruda del MCP
     else allowed = false
         Roxy-->>Agente: 403 (sin body)
     end
 ```
+
+> Nota: el contrato real hoy es `{rules, prompt}` → evaluator, no
+> `{mcp, request, time}`. Aegis Gate (Bloque 10) espera esta segunda
+> forma — no está enchufado detrás de `EVALUATOR_URL` todavía.
 
 ## Los 3 escenarios del demo (Bloque 7)
 
@@ -105,32 +113,61 @@ flowchart LR
     r3["3. Flujo agéntico\nCON Roxy"] --> c3["Roxy evalúa cada acción\n/health/consistency → 200"]
 ```
 
-## Notas de estado (para no perder contexto al iterar)
+## Notas de estado (actualizado 2026-08-23 — para no perder contexto al iterar)
 
-- **Roxy Gateway ya no evalúa reglas él mismo.** Desde el merge más
-  reciente, delega 100% la decisión a un **Evaluator API** externo vía
-  `EVALUATOR_URL` (contrato HTTP: recibe `mcp + request + time`, responde
-  `allowed/violatedPriority/reason`). El código LLM que tenía antes
-  (OpenRouter, luego Claude Sonnet 5) se eliminó de `roxy-gateway/` — hoy
-  el evaluator es un componente pluggable separado. **Este es exactamente
-  el punto donde entra el Bloque 10 (`verifier/`, Sebastián, Z3
-  determinista)** — aún no tiene código, solo la carpeta registrada en
-  `CLAUDE.md`.
-- **Roxy Gateway ahora sí llama al MCP real** (antes solo evaluaba y
-  logueaba) — si el evaluator aprueba, hace el POST real a `server.url`
-  con las credenciales del MCP, y devuelve la respuesta cruda al agente.
-- Los 3 MCPs del mock (`mongo-catalog-mcp`, `payments-mcp`,
-  `inventory-mcp`, en `mongo-data/population/mcps.mock.json`) apuntan a
-  URLs ficticias (`https://mcp.internal/...`) — todavía no hay un MCP real
-  registrado apuntando a `demo_billing`. Eso lo tiene que crear quien
-  conecte el Bloque 5 (agent-flow-demo) al Bloque 2.
-- **Bloques sin código aún:** `agent-flow-demo/` (5), `langchain-
-  interceptor/` (9), `demo/` (7), `verifier/` (10), `landing-page/` (8).
-  El diagrama de arriba ya anticipa su forma según lo que describe
-  `idea.md`, pero se ajusta apenas suban algo real — por eso este doc
-  vive en `research/`, para iterar rápido sin tocar código de ningún
-  bloque.
-- La notificación de Roxy al dashboard (`DASHBOARD_URL`) es opcional —
-  si no está configurada, es no-op. El dashboard hoy solo expone `GET
-  /security-logs` leyendo Mongo directo; no confirmé un endpoint que
-  reciba ese POST de notificación.
+- **Roxy Gateway no evalúa reglas él mismo.** Delega 100% la decisión a un
+  **Evaluator API** externo vía `EVALUATOR_URL`. Pero el contrato que
+  manda hoy (`roxy-gateway/internal/policy/remote.go`) es
+  `{rules: string[], prompt: string}` → `{allowed, violatedPriority,
+  reason}` — **más simple** que el `{mcp, request, time}` que documentamos
+  antes. En local (`demo/local-stack.sh`), `EVALUATOR_URL` apunta a
+  `agent-flow-demo/scripts/stub_evaluator.py` (puerto 9000), un stub de
+  prueba, no a un evaluador real.
+- **Roxy Gateway ya no proxea la petición tal cual** — usa **Claude
+  Sonnet 5 como "planner"**: decide endpoint/método/body y llama al MCP
+  vía un tool `http_request`; Roxy solo ejecuta el HTTP e inyecta
+  credenciales. Ganó también `internal/gateway/oauth.go` (identidad de
+  agente) — no revisado en detalle todavía.
+- **Bloque 10 (`verifier/`) ya NO está vacío — es real y se llama "Aegis
+  Gate".** Motor determinista en Rust (axum, puerto 8080), 0 LLM en el
+  camino de decisión, con Z3 opcional (`--features smt`, prueba una
+  invariante de reserva sobre pagos) y **atestación on-chain real en
+  Solana** (Solana Attestation Service, devnet) de cada veredicto —
+  reproducible byte a byte (mismo input → mismo hash siempre). El LLM solo
+  se usa para *compilar* la regla en lenguaje natural a una política
+  formal congelada — la decisión corre sobre esa política ya fija, nunca
+  sobre texto libre. Ver `verifier/README.md`.
+  - **Pero no está conectado a roxy-gateway todavía.** El `EvalInput` real
+    de Aegis Gate (`verifier/engine/src/model.rs`) es `{mcp: {id, name,
+    description, rules}, request: {accessedBy, action, payload}, time}` —
+    el contrato **viejo**, no el `{rules, prompt}` que roxy-gateway manda
+    hoy. Alguien tiene que decidir cuál de los dos contratos gana y
+    ajustar el lado que sobra antes de poder enchufar Aegis Gate de
+    verdad detrás de `EVALUATOR_URL`.
+- **`roxy-sdk/` (Python, nuevo) reemplazó el registro manual del árbol.**
+  Un callback de LangChain (`Roxy` en `roxy-sdk/src/roxy/callback.py`) se
+  engancha una vez en la invocación y registra cada agente solo (`POST
+  /agents`), sin que el código de `agent-flow-demo` tenga que pasar ids a
+  mano. También propaga la cadena entre procesos (headers
+  `X-Roxy-Session`/`X-Roxy-Parent`) y expone `guard()` para pedirle
+  veredicto a Roxy antes de actuar. Los archivos viejos
+  (`agents_client.py`, `roxy_client.py`, `tracing.py` dentro de
+  `agent-flow-demo/`) se borraron — todo eso vive en el SDK ahora.
+  `langchain-interceptor/` (Bloque 9, Santiago) sigue vacío — parece que
+  el SDK terminó cubriendo lo que iba a ser ese bloque.
+- **Bloque 3 (dashboard) ya tiene el árbol de agentes real**, no mock:
+  `POST/GET /agents` (Santiago) + `GET /sessions` y `PATCH
+  /agents/{id}` (Freddy, hoy) sobre la misma colección `roxy.agents`
+  (`purpose`, `parentId`, `sessionId`, `outcome?`). El frontend tiene una
+  sección "Agents" (lista de sesiones + grafo del árbol) — ver
+  `dashboard/app/src/views/Agents.tsx`.
+- **Bloque 5 (agent-flow-demo) está hecho**, no es mock: usa
+  `roxy-sdk` de verdad, corre contra `demo-api`/Mongo real, y
+  `agent-flow-demo/compare.sh` corre el contraste con/sin Roxy.
+- Los 3 MCPs del mock original (`mongo-catalog-mcp`, `payments-mcp`,
+  `inventory-mcp`) siguen con URLs ficticias — el MCP que sí importa para
+  la demo (`invoices-mcp` → `demo_billing`) ya se registra aparte vía
+  `agent-flow-demo/scripts/register_invoices_mcp.py`.
+- **`demo/local-stack.sh`** (Bloque 7) ya levanta/baja todo el stack local
+  en el orden correcto (`up`/`status`/`down`) — el punto de partida para
+  correr la demo completa a mano.

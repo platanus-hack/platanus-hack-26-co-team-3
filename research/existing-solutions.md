@@ -125,3 +125,17 @@ modelo de "regla en lenguaje natural" funciona y es accesible para el dueño
 del dato (nadie más lo tiene); el roadmap honesto es endurecer la capa de
 decisión (filtro determinista para reglas duras + LLM solo para las
 ambiguas — ver conversación previa del equipo sobre esto).
+
+**Actualización (2026-08-23): ese roadmap ya no es solo una idea.**
+Sebastián construyó **Aegis Gate** (Bloque 10, `verifier/`) — exactamente
+el patrón "LLM compila la regla a política formal congelada, la decisión
+corre 100% determinista sobre esa política, sin LLM en el camino" — con
+Z3 opcional y cada veredicto anclado on-chain en Solana (SAS, devnet,
+reproducible byte a byte). Es una respuesta real y propia a la misma
+crítica que le hacíamos a DOF-MESH/Cedar/OPA sobre Roxy. Lo que falta:
+**no está conectado a roxy-gateway todavía** — el contrato que
+`roxy-gateway` manda hoy (`{rules, prompt}`) no coincide con el que Aegis
+Gate espera (`{mcp, request, time}`, ver
+[architecture-diagram.md](architecture-diagram.md)). Es trabajo de
+integración pendiente, no de investigación — vale la pena resolverlo
+porque convierte la autocrítica de este documento en un "ya lo tenemos".
