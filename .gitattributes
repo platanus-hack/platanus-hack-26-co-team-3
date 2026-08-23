@@ -1,0 +1,16 @@
+# Keeps GitHub's language bar honest about what this repo actually is.
+#
+# Without this, ONE file -- dashboard/design/roxy-dashboard.html, a 2.26 MB
+# export from the design tool with its whole editor minified inside -- is
+# 82.7% of the repo by bytes, so the repo reads as "HTML" instead of the
+# Rust / Python / TypeScript / Go system it is. Nothing is deleted or
+# hidden here; these files just stop counting toward the stats.
+
+# Published artifact of the design canvas: generated output, not authored code.
+dashboard/design/roxy-dashboard.html linguist-generated=true
+
+# Design artboards for the same canvas.
+dashboard/design/*.dc.html linguist-generated=true
+
+# Third-party, vendored verbatim (see .grok/plugins/superpowers/VENDOR.txt).
+.grok/plugins/superpowers/** linguist-vendored=true
