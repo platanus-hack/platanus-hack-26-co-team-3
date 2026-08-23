@@ -53,3 +53,28 @@ export function CloseIcon() {
     </svg>
   )
 }
+
+export function AgentsNavIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="4.5" r="2.3" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="4.5" cy="16" r="2.3" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="15.5" cy="16" r="2.3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6.8V10M10 10L4.5 13.7M10 10L15.5 13.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function ReplayIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M16 6.5A6.5 6.5 0 1 0 17.5 10.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path d="M16 2.5V7H11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
