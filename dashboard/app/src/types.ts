@@ -30,6 +30,21 @@ export interface Agent {
   outcome: AgentOutcome | null
 }
 
+/** demo-api's consistency traffic light -- the damage, as the victim sees it. */
+export interface ConsistencyViolation {
+  invoice_id: string
+  rule: string
+  expected: number | string
+  found: number | string
+  detail: string
+}
+
+export interface ConsistencyReport {
+  consistent: boolean
+  checked: number
+  violations: ConsistencyViolation[]
+}
+
 export interface AgentSession {
   sessionId: string
   rootPurpose: string

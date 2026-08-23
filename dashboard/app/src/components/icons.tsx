@@ -78,3 +78,12 @@ export function ReplayIcon() {
     </svg>
   )
 }
+
+export function LiveIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="3" fill="currentColor" />
+      <path d="M4.6 4.6a7.6 7.6 0 0 0 0 10.8M15.4 15.4a7.6 7.6 0 0 0 0-10.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}

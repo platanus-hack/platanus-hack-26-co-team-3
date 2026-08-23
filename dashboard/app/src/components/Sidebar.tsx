@@ -1,6 +1,6 @@
-import { AgentsNavIcon, GridIcon, ListIcon } from './icons'
+import { AgentsNavIcon, GridIcon, ListIcon, LiveIcon } from './icons'
 
-export type View = 'overview' | 'logs' | 'agents'
+export type View = 'live' | 'overview' | 'logs' | 'agents'
 
 interface SidebarProps {
   view: View
@@ -16,6 +16,14 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
       </div>
 
       <div className="sidebar-nav">
+        <button
+          type="button"
+          className={`nav-item ${view === 'live' ? 'active' : ''}`}
+          onClick={() => onNavigate('live')}
+        >
+          <LiveIcon />
+          Live
+        </button>
         <button
           type="button"
           className={`nav-item ${view === 'overview' ? 'active' : ''}`}

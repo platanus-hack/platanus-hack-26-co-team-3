@@ -7,9 +7,10 @@ import { LogDrawer } from './components/LogDrawer'
 import { Overview } from './views/Overview'
 import { Logs } from './views/Logs'
 import { Agents } from './views/Agents'
+import { Live } from './views/Live'
 
 function App() {
-  const [view, setView] = useState<View>('overview')
+  const [view, setView] = useState<View>('live')
   const [logs, setLogs] = useState<SecurityLog[]>([])
   const [selected, setSelected] = useState<SecurityLog | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -37,14 +38,21 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
+  const needsLogs = view === 'overview' || view === 'logs'
+
   return (
     <div className="app-shell">
       <Sidebar view={view} onNavigate={setView} />
 
-      {status === 'loading' && <div className="state-message">Loading logs…</div>}
-      {status === 'error' && <div className="state-message">Couldn't reach the dashboard API.</div>}
+      {/* Only Overview and Logs are blocked on the security-log fetch; Live and
+          Agents load their own data and must not sit behind it. */}
+      {needsLogs && status === 'loading' && <div className="state-message">Loading logs…</div>}
+      {needsLogs && status === 'error' && (
+        <div className="state-message">Couldn't reach the dashboard API.</div>
+      )}
       {status === 'ready' && view === 'overview' && <Overview logs={logs} onSelect={setSelected} />}
       {status === 'ready' && view === 'logs' && <Logs logs={logs} onSelect={setSelected} />}
+      {view === 'live' && <Live logs={logs} />}
       {view === 'agents' && <Agents logs={logs} />}
 
       <LogDrawer log={selected} onClose={() => setSelected(null)} />
