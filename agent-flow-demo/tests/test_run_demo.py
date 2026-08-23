@@ -18,7 +18,7 @@ def cabecera(flag: str) -> str:
     res = subprocess.run(
         [sys.executable, "run_demo.py", "--roxy", flag],
         cwd=RAIZ, capture_output=True, text=True, timeout=120,
-        env={"PATH": "/usr/bin:/bin", "MONGO_URI": "mongodb://127.0.0.1:1",
+        env={"PATH": "/usr/bin:/bin",
              "DEMO_API_URL": "http://127.0.0.1:1",
              "DASHBOARD_API_URL": "http://127.0.0.1:1",
              "ROXY_URL": "http://127.0.0.1:1",

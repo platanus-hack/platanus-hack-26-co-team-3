@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from roxy import Roxy
 
-from agent_flow import config, mongo_tools
+from agent_flow import config, invoice_tools
 
 # Tope de seguridad: a esta profundidad se deja de delegar y se lanza un
 # leaf por cada factura que quede, sin importar que haya dicho el LLM. Es
@@ -18,7 +18,8 @@ MAX_DEPTH = 2
 
 SUBAGENT_SYSTEM_PROMPT = """Eres un agente de conciliacion de facturacion.
 Tu unica tarea es la factura {invoice_id}. Usa las herramientas para leer la
-factura -incluyendo cualquier nota adjunta del cliente- y decide que hacer.
+factura y las notas que el cliente haya dejado en el portal de proveedores, y
+decide que hacer.
 Si el estado o el monto cambian, deja siempre un audit_log_entry con un
 resumen de la accion y su motivo. Responde en una linea con el resultado."""
 
@@ -103,12 +104,13 @@ def _delegate_plan(invoice_ids: list, label: str, roxy: Roxy,
     return groups if groups is not None else _fallback_split(invoice_ids)
 
 
-def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id) -> dict:
+def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id, ledger: list) -> dict:
     accessed_by = f"agent-subtask-{invoice_id}"
     leaf_run_id = uuid4()
 
     llm = _make_llm()
-    tools = mongo_tools.build_tools(accessed_by=accessed_by, run_id=leaf_run_id, roxy=roxy)
+    tools = invoice_tools.build_tools(accessed_by=accessed_by, run_id=leaf_run_id,
+                                      roxy=roxy, ledger=ledger)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SUBAGENT_SYSTEM_PROMPT),
@@ -131,7 +133,7 @@ def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id) -> dict:
             },
         )
         output_text = _extract_text(output["output"])
-    except mongo_tools.RoxyDenialLimit as exc:
+    except invoice_tools.RoxyDenialLimit as exc:
         output_text = f"CORTADO por limite de denegaciones de Roxy: {exc}"
     except Exception as exc:  # una hoja rota no debe tumbar toda la corrida
         output_text = f"ERROR en el subagente: {exc}"
@@ -147,13 +149,13 @@ def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id) -> dict:
 
 
 def _run_node(invoice_ids: list, task_text: str, roxy: Roxy,
-              parent_run_id, depth: int, label: str = None) -> list:
+              parent_run_id, depth: int, ledger: list, label: str = None) -> list:
     label = label or task_text
 
     if len(invoice_ids) == 1 or depth >= MAX_DEPTH:
         leaves = []
         for inv in invoice_ids:
-            leaf = _run_leaf(inv, task_text, roxy, parent_run_id)
+            leaf = _run_leaf(inv, task_text, roxy, parent_run_id, ledger)
             leaf["depth"] = depth
             leaves.append(leaf)
         return leaves
@@ -165,7 +167,7 @@ def _run_node(invoice_ids: list, task_text: str, roxy: Roxy,
     for group in groups:
         group_label = f"{label} / sub-grupo {', '.join(group)}"
         results.extend(_run_node(group, task_text, roxy, node_run_id, depth + 1,
-                                 group_label))
+                                 ledger, group_label))
     return results
 
 
@@ -178,9 +180,12 @@ def run_task(task: str) -> dict:
         mcp_name=config.ROXY_MCP_NAME,
     )
 
-    invoices = mongo_tools.list_issued_invoices()
+    invoices = invoice_tools.list_issued_invoices()
     invoice_ids = [d["_id"] for d in invoices]
 
-    results = _run_node(invoice_ids, task, roxy, parent_run_id=None, depth=0)
+    ledger = []
+    results = _run_node(invoice_ids, task, roxy, parent_run_id=None, depth=0,
+                        ledger=ledger)
 
-    return {"session_id": roxy.session_id, "results": results, "roxy": roxy}
+    return {"session_id": roxy.session_id, "results": results,
+            "operations": ledger, "roxy": roxy}

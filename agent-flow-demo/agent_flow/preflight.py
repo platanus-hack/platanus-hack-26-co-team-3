@@ -1,7 +1,6 @@
-"""Chequeo de las dependencias externas del flujo antes de gastar tokens.
-
-Sin esto, una dependencia caida se manifiesta como un traceback de urllib3
-cuarenta lineas mas abajo, en medio de la corrida.
+"""Chequeo de los servicios con los que habla el flujo, antes de gastar
+tokens. Sin esto, un servicio caido se manifiesta como un traceback de
+urllib3 cuarenta lineas mas abajo, en medio de la corrida.
 """
 from dataclasses import dataclass
 from typing import List, Optional
@@ -30,29 +29,17 @@ class Check:
         return line
 
 
-def check_mongo() -> Check:
-    try:
-        from pymongo import MongoClient
-        client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=3000)
-        client.admin.command("ping")
-        return Check("Mongo local", True, config.MONGO_URI)
-    except Exception as exc:
-        return Check(
-            "Mongo local", False, f"{type(exc).__name__}: {str(exc)[:80]}",
-            "cd mongo-data && ./run.sh",
-        )
-
-
 def check_demo_api(url: str) -> Check:
+    """La API funcional sobre la que trabajan los agentes. Solo se lee."""
     try:
-        resp = requests.get(f"{url}/health/consistency", timeout=5)
+        resp = requests.get(f"{url}/health/consistency", timeout=10)
         body = resp.json()
         return Check("demo-api", True,
                      f"{url} ({body['checked']} facturas, consistente={body['consistent']})")
     except Exception as exc:
         return Check(
             "demo-api", False, f"{url} — {type(exc).__name__}",
-            "cd demo-api && ./run.sh",
+            "revisa DEMO_API_URL o si el servicio esta arriba",
         )
 
 
@@ -61,37 +48,12 @@ def check_roxy() -> Check:
     try:
         resp = requests.get(f"{url}/health", timeout=15)
         if resp.status_code != 200:
-            return Check(
-                "roxy-gateway", False, f"{url} devolvio {resp.status_code}",
-                "si es la nube, el servicio esta caido; para local: "
-                "cd roxy-gateway && go run ./cmd/roxy",
-            )
+            return Check("roxy-gateway", False, f"{url} devolvio {resp.status_code}",
+                         "revisa ROXY_URL o si el gateway esta arriba")
         return Check("roxy-gateway", True, f"{url} — {resp.json()}")
     except Exception as exc:
-        return Check(
-            "roxy-gateway", False, f"{url} — {type(exc).__name__}",
-            "cd roxy-gateway && go run ./cmd/roxy (o apunta ROXY_URL a la nube)",
-        )
-
-
-def check_mcp_registered() -> Check:
-    """El MCP tiene que existir en la base que lee la Roxy configurada. Con
-    ROXY_URL apuntando a la nube, esta comprobacion mira la base local y no
-    dice nada de Atlas: solo sirve cuando Roxy tambien es local."""
-    try:
-        from pymongo import MongoClient
-        client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=3000)
-        doc = client["roxy"]["mcps"].find_one({"name": config.ROXY_MCP_NAME})
-        if doc is None:
-            return Check(
-                f"MCP '{config.ROXY_MCP_NAME}' (en Mongo local)", False, "no registrado",
-                "python3 scripts/register_invoices_mcp.py",
-            )
-        return Check(f"MCP '{config.ROXY_MCP_NAME}' (en Mongo local)", True,
-                     f"{len(doc.get('rules', []))} reglas")
-    except Exception as exc:
-        return Check(f"MCP '{config.ROXY_MCP_NAME}'", False,
-                     f"{type(exc).__name__}", "revisa Mongo primero")
+        return Check("roxy-gateway", False, f"{url} — {type(exc).__name__}",
+                     "revisa ROXY_URL o si el gateway esta arriba")
 
 
 def check_dashboard_api() -> Check:
@@ -103,8 +65,7 @@ def check_dashboard_api() -> Check:
         if resp.status_code != 200:
             return Check("dashboard API (/agents)", False,
                          f"{url} devolvio {resp.status_code}",
-                         "cd dashboard/api && uvicorn main:app --port 8000",
-                         blocking=False)
+                         "revisa DASHBOARD_API_URL", blocking=False)
         if "application/json" not in resp.headers.get("Content-Type", ""):
             return Check("dashboard API (/agents)", False,
                          f"{url} respondio HTML, no JSON",
@@ -113,15 +74,13 @@ def check_dashboard_api() -> Check:
         return Check("dashboard API (/agents)", True, url)
     except Exception as exc:
         return Check("dashboard API (/agents)", False, f"{url} — {type(exc).__name__}",
-                     "cd dashboard/api && uvicorn main:app --port 8000",
-                     blocking=False)
+                     "revisa DASHBOARD_API_URL", blocking=False)
 
 
 def run_all(demo_api_url: str, with_roxy: bool) -> List[Check]:
-    checks = [check_mongo(), check_demo_api(demo_api_url), check_dashboard_api()]
+    checks = [check_demo_api(demo_api_url), check_dashboard_api()]
     if with_roxy:
         checks.append(check_roxy())
-        checks.append(check_mcp_registered())
     return checks
 
 
