@@ -763,11 +763,22 @@ code {
 
 .graph-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 40px;
+  padding: 28px;
+  /* The surface is scaled to fit, so centre it in whatever room is left
+     instead of pinning it to the top-left corner. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.graph-surface { position: relative; margin: 0 auto; }
+.graph-surface {
+  position: relative;
+  flex-shrink: 0;
+  transform-origin: center center;
+  transition: transform .25s ease;
+}
 
 .graph-edges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 
@@ -797,9 +808,9 @@ code {
   flex-direction: column;
   justify-content: center;
   gap: 6px;
-  padding: 13px 17px;
+  padding: 11px 14px;
   border: 1.5px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg);
   text-align: left;
   cursor: pointer;
@@ -859,7 +870,7 @@ code {
 }
 
 .graph-node-purpose {
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-h);
   overflow: hidden;

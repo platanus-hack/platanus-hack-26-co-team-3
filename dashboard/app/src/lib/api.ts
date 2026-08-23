@@ -1,7 +1,10 @@
 import type { Agent, AgentSession, ConsistencyReport, SecurityLog } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'https://roxygt.lat/api'
-const DEMO_API_URL = import.meta.env.VITE_DEMO_API_URL ?? 'https://roxygt.lat/demo-api'
+// Relative by default so the dev server's proxy (vite.config.ts) handles it
+// and the browser never makes a cross-origin call. In a deployed build this
+// resolves against the same CloudFront that serves /demo-api anyway.
+const DEMO_API_URL = import.meta.env.VITE_DEMO_API_URL ?? '/demo-api'
 
 /**
  * The victim API's own verdict on its data. Returns 200 when consistent and

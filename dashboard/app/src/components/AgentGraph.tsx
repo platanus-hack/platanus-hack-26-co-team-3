@@ -11,15 +11,21 @@ interface AgentGraphProps {
   onSelectAgent: (agentId: string) => void
 }
 
-const NODE_WIDTH = 236
-const NODE_HEIGHT = 78
-const X_GAP = 40
-const Y_GAP = 74
+const NODE_WIDTH = 190
+const NODE_HEIGHT = 66
+const X_GAP = 24
+const Y_GAP = 56
 const REVEAL_STEP_MS = 200
 
 export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: AgentGraphProps) {
   const laidOut = useMemo(() => layoutTree(agents), [agents])
   const [replayKey, setReplayKey] = useState(0)
+
+  // A wide tree used to overflow its pane and sit off to one side. Measure the
+  // pane and shrink the whole thing until it fits, so the shape of the run is
+  // visible at a glance instead of needing to be scrolled into view.
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [scale, setScale] = useState(1)
 
   // Nodes that arrive while a run is in flight should pop in on their own,
   // not wait behind the stagger of everything already on screen. Only the
@@ -71,6 +77,25 @@ export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: 
     }
   }
 
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    function fit() {
+      const node = scrollRef.current
+      if (!node || width === 0 || height === 0) return
+      const padding = 56
+      const availableW = node.clientWidth - padding
+      const availableH = node.clientHeight - padding
+      if (availableW <= 0 || availableH <= 0) return
+      // Only ever shrink: blowing a small tree up to fill the pane looks wrong.
+      setScale(Math.min(1, availableW / width, availableH / height))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [width, height])
+
   if (agents.length === 0) {
     return (
       <div className="agents-canvas">
@@ -103,8 +128,12 @@ export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: 
         </button>
       </div>
 
-      <div className="graph-scroll">
-        <div className="graph-surface" style={{ width, height }} key={`${sessionKey}-${replayKey}`}>
+      <div className="graph-scroll" ref={scrollRef}>
+        <div
+          className="graph-surface"
+          style={{ width, height, transform: `scale(${scale})` }}
+          key={`${sessionKey}-${replayKey}`}
+        >
           <svg className="graph-edges" width={width} height={height}>
             {laidOut.map((agent) => {
               if (agent.parentId === null) return null
