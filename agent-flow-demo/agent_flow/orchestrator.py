@@ -5,7 +5,7 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from agent_flow import config, mongo_tools
+from agent_flow import agents_client, config, mongo_tools
 from agent_flow.tracing import RunTraceHandler
 
 # Tope de seguridad: a esta profundidad se deja de delegar y se lanza un
@@ -103,11 +103,23 @@ def _delegate_plan(invoice_ids: list, label: str, handler: RunTraceHandler,
     return groups if groups is not None else _fallback_split(invoice_ids)
 
 
-def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_run_id) -> dict:
+def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_run_id,
+              session_id: str, parent_agent_id) -> dict:
     accessed_by = f"agent-subtask-{invoice_id}"
     leaf_run_id = uuid4()
+
+    # El id que asigna el dashboard es la identidad que viaja a Roxy, para
+    # que el log de seguridad se pueda cruzar con el nodo del arbol. Si la
+    # API no responde, se cae al run_id local y la corrida sigue.
+    agent_id = agents_client.register(
+        purpose=f"Conciliar {invoice_id}: {purpose}",
+        session_id=session_id,
+        parent_id=parent_agent_id,
+    )
+    roxy_identity = agent_id or str(leaf_run_id)
+
     llm = _make_llm()
-    tools = mongo_tools.build_tools(accessed_by=accessed_by, run_id=str(leaf_run_id))
+    tools = mongo_tools.build_tools(accessed_by=accessed_by, run_id=roxy_identity)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SUBAGENT_SYSTEM_PROMPT),
@@ -140,39 +152,56 @@ def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_ru
         "invoice_id": invoice_id,
         "accessed_by": accessed_by,
         "run_id": str(leaf_run_id),
+        "agent_id": agent_id,
         "depth": None,  # lo completa _run_node
         "output": output_text,
     }
 
 
 def _run_node(invoice_ids: list, task_text: str, handler: RunTraceHandler,
-              parent_run_id, depth: int, label: str = None) -> list:
+              parent_run_id, depth: int, session_id: str, parent_agent_id,
+              label: str = None) -> list:
     label = label or task_text
 
     if len(invoice_ids) == 1 or depth >= MAX_DEPTH:
         leaves = []
         for inv in invoice_ids:
-            leaf = _run_leaf(inv, task_text, handler, parent_run_id)
+            leaf = _run_leaf(inv, task_text, handler, parent_run_id,
+                             session_id, parent_agent_id)
             leaf["depth"] = depth
             leaves.append(leaf)
         return leaves
 
     node_run_id = uuid4()
+    node_agent_id = agents_client.register(
+        purpose=f"Delegar {len(invoice_ids)} facturas: {', '.join(invoice_ids)}",
+        session_id=session_id,
+        parent_id=parent_agent_id,
+    )
     groups = _delegate_plan(invoice_ids, label, handler, node_run_id, parent_run_id)
 
     results = []
     for group in groups:
         group_label = f"{label} / sub-grupo {', '.join(group)}"
-        results.extend(_run_node(group, task_text, handler, node_run_id, depth + 1, group_label))
+        results.extend(_run_node(group, task_text, handler, node_run_id, depth + 1,
+                                 session_id, node_agent_id, group_label))
     return results
 
 
 def run_task(task: str) -> dict:
     handler = RunTraceHandler()
+    session_id = agents_client.new_session_id()
 
     invoices = mongo_tools.list_issued_invoices()
     invoice_ids = [d["_id"] for d in invoices]
 
-    results = _run_node(invoice_ids, task, handler, parent_run_id=None, depth=0)
+    root_agent_id = agents_client.register(
+        purpose=f"Orquestador: {task}",
+        session_id=session_id,
+        parent_id=None,
+    )
 
-    return {"results": results}
+    results = _run_node(invoice_ids, task, handler, parent_run_id=None, depth=0,
+                        session_id=session_id, parent_agent_id=root_agent_id)
+
+    return {"session_id": session_id, "root_agent_id": root_agent_id, "results": results}

@@ -17,9 +17,13 @@ class Check:
     ok: bool
     detail: str
     hint: str = ""
+    blocking: bool = True
 
     def render(self) -> str:
-        mark = "OK  " if self.ok else "FALLA"
+        if self.ok:
+            mark = "OK  "
+        else:
+            mark = "FALLA" if self.blocking else "AVISO"
         line = f"  [{mark}] {self.name}: {self.detail}"
         if not self.ok and self.hint:
             line += f"\n         → {self.hint}"
@@ -90,8 +94,31 @@ def check_mcp_registered() -> Check:
                      f"{type(exc).__name__}", "revisa Mongo primero")
 
 
+def check_dashboard_api() -> Check:
+    """El arbol de delegacion se registra contra /agents; si no responde, la
+    corrida igual funciona pero no queda traza para el dashboard."""
+    url = config.DASHBOARD_API_URL
+    try:
+        resp = requests.get(f"{url}/agents", params={"sessionId": "preflight"}, timeout=10)
+        if resp.status_code != 200:
+            return Check("dashboard API (/agents)", False,
+                         f"{url} devolvio {resp.status_code}",
+                         "cd dashboard/api && uvicorn main:app --port 8000",
+                         blocking=False)
+        if "application/json" not in resp.headers.get("Content-Type", ""):
+            return Check("dashboard API (/agents)", False,
+                         f"{url} respondio HTML, no JSON",
+                         "el endpoint /agents no esta desplegado en esa URL",
+                         blocking=False)
+        return Check("dashboard API (/agents)", True, url)
+    except Exception as exc:
+        return Check("dashboard API (/agents)", False, f"{url} — {type(exc).__name__}",
+                     "cd dashboard/api && uvicorn main:app --port 8000",
+                     blocking=False)
+
+
 def run_all(demo_api_url: str, with_roxy: bool) -> List[Check]:
-    checks = [check_mongo(), check_demo_api(demo_api_url)]
+    checks = [check_mongo(), check_demo_api(demo_api_url), check_dashboard_api()]
     if with_roxy:
         checks.append(check_roxy())
         checks.append(check_mcp_registered())
@@ -103,8 +130,8 @@ def report(checks: List[Check]) -> Optional[str]:
     print("Chequeo previo:")
     for c in checks:
         print(c.render())
-    failed = [c for c in checks if not c.ok]
-    if not failed:
-        print()
+    bloqueantes = [c for c in checks if not c.ok and c.blocking]
+    print()
+    if not bloqueantes:
         return None
-    return f"{len(failed)} chequeo(s) fallaron; no se arranca el flujo."
+    return f"{len(bloqueantes)} chequeo(s) fallaron; no se arranca el flujo."

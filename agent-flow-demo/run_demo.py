@@ -26,6 +26,36 @@ def _get_consistency() -> dict:
     return resp.json()
 
 
+def _print_agent_tree(session_id: str):
+    """Relee de la API lo que quedo registrado, para ver el arbol como lo
+    va a ver el dashboard y no como lo cree este proceso."""
+    from agent_flow import agents_client
+
+    try:
+        nodos = agents_client.fetch_tree(session_id)
+    except Exception as exc:
+        print(f"\n(no se pudo leer el arbol de /agents: {type(exc).__name__})")
+        return
+
+    if not nodos:
+        print("\n(no quedo ningun agente registrado en /agents)")
+        return
+
+    hijos = {}
+    for n in nodos:
+        hijos.setdefault(n["parentId"], []).append(n)
+
+    print(f"\n--- Arbol registrado en /agents (sessionId={session_id}) ---")
+
+    def bajar(parent_id, nivel):
+        for n in hijos.get(parent_id, []):
+            print(f"{'  ' * nivel}└─ {n['_id']}  {n['purpose'][:70]}")
+            bajar(n["_id"], nivel + 1)
+
+    bajar(None, 0)
+    print(f"({len(nodos)} nodos)")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--roxy", choices=["on", "off"], default="off")
@@ -65,6 +95,8 @@ def main():
     for r in outcome["results"]:
         indent = "  " * r["depth"]
         print(f"{indent}* {r['invoice_id']} ({r['accessed_by']}, profundidad={r['depth']}): {r['output']}")
+
+    _print_agent_tree(outcome["session_id"])
 
     after = _get_consistency()
     print(f"\nConsistencia DESPUES: {json.dumps(after, ensure_ascii=False)}\n")
