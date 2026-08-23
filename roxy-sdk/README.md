@@ -1,4 +1,4 @@
-# roxy
+# roxy-guard
 
 Trazabilidad y control de acceso para flujos de agentes que consumen MCPs.
 
@@ -10,10 +10,12 @@ veredicto de Roxy antes de que se ejecute.
 ## Instalación
 
 ```bash
-pip install roxy
+pip install roxy-guard
 # o
-uv add roxy
+uv add roxy-guard
 ```
+
+El paquete se instala como `roxy-guard` y se importa como `roxy`.
 
 ## Uso
 

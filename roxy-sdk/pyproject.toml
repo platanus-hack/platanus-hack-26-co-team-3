@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "roxy"
+name = "roxy-guard"
 version = "0.1.0"
 description = "Trazabilidad y control de acceso para flujos de agentes que consumen MCPs"
 readme = "README.md"
