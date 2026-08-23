@@ -1154,3 +1154,92 @@ code {
 
 /* Inside Live the graph fills the pane instead of sitting in its own card. */
 .live-agents .agents-canvas { flex: 1; min-height: 0; }
+
+/* Responsive ---------------------------------------------------------------
+   A judge may well open this on a phone. The sidebar becomes a top bar, the
+   split panes stack, and the graph keeps its own horizontal scroll instead of
+   pushing the page sideways. */
+
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    overflow-x: auto;
+  }
+
+  .sidebar-brand { padding: 0 10px 0 0; flex-shrink: 0; }
+  .sidebar-nav { flex-direction: row; gap: 4px; }
+  .nav-item { padding: 8px 11px; white-space: nowrap; }
+  .sidebar > div[style] { display: none; }
+  .live-pill { display: none; }
+
+  .view-content { padding: 22px 18px 40px; max-width: none; overflow-y: visible; }
+  .agents-view { padding-right: 18px; }
+
+  /* Stacked master-detail: the list on top, the canvas below it. */
+  .agents-body { flex-direction: column; }
+  .agents-sessions {
+    width: 100%;
+    max-height: 190px;
+    padding-right: 0;
+  }
+  .agents-canvas { min-height: 420px; }
+
+  .stat-grid { grid-template-columns: 1fr; }
+
+  /* The logs table is a grid of fixed columns; below this width it stops
+     being a table and each row becomes a card. */
+  .logs-table-header { display: none; }
+  .log-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 14px 16px;
+  }
+  .log-mcp, .log-accessed-by, .log-time, .log-description { white-space: normal; }
+  .log-description { color: var(--text-muted); }
+
+  .filter-bar { align-items: stretch; }
+  .filter-pills { flex-wrap: wrap; }
+  .mcp-select { margin-left: 0; }
+
+  .drawer-panel { width: 100%; max-width: 100%; padding: 20px; }
+
+  /* Live stacks: verdict first, agents under it. */
+  .live-view { flex-direction: column; overflow: visible; }
+  .live-data {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 26px 20px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .live-data.is-violated { border-right-color: transparent; border-bottom-color: var(--red-border); }
+  .live-verdict { font-size: clamp(38px, 12vw, 60px); }
+  .live-foot { margin-top: 20px; padding-top: 16px; }
+  .live-agents { padding: 26px 20px 30px; min-height: 70vh; }
+  .live-agents-head { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .live-stat strong { font-size: 23px; }
+
+  .agents-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .follow-toggle { align-self: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .brand-name { font-size: 19px; }
+  .nav-item { font-size: 13px; padding: 7px 9px; }
+  .live-violation-nums { font-size: 18px; }
+  .graph-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .replay-btn { justify-content: center; }
+}
