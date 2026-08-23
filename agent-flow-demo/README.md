@@ -22,6 +22,23 @@ cp .env.example .env   # completar ANTHROPIC_API_KEY
 python3 scripts/register_invoices_mcp.py   # una vez, mientras Mongo esté arriba
 ```
 
+## Tests
+
+```bash
+python3 -m pytest tests/ -q
+```
+
+36 tests, sin servicios levantados (HTTP y Mongo mockeados). Cubren la
+traducción de la respuesta de Roxy a permiso/negación, el corte por
+denegaciones, el reparto recursivo de facturas y la reconstrucción del
+árbol de delegación.
+
+## Chequeo previo
+
+`run_demo.py` verifica Mongo, `demo-api` y (con `--roxy on`) el gateway y
+el MCP registrado antes de gastar tokens, y aborta con el comando exacto
+que falta en vez de un traceback.
+
 ## Correr
 
 ```bash
@@ -47,8 +64,8 @@ haga falta sin arrastrar corrupción de la corrida anterior.
   tools de arriba).
 - `agent_flow/seed_injection.py` — agrega `notes` a dos facturas del seed de
   Freddy (una nota legítima, una que empuja a saltarse auditoría).
-- `agent_flow/tracing.py` — captura `on_chain_start`/`on_tool_start`/
-  `on_llm_start` y escribe `traces/run.jsonl` con el shape propuesto en
-  `demo/INTEGRATION-NOTES.md` para la futura colección `traces`.
+- La trazabilidad y el control de acceso salen del SDK (`roxy-sdk/`, publicado como `roxy`): una
+  instancia de `Roxy` se pasa como callback y registra el árbol en
+  `/agents` sola.
 - `scripts/register_invoices_mcp.py` — upsert de `invoices-mcp` en
   `roxy.mcps` (no toca `mongo-data/population/mcps.mock.json`).

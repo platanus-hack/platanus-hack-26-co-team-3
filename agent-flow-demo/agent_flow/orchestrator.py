@@ -5,8 +5,9 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+from roxy import Roxy
+
 from agent_flow import config, mongo_tools
-from agent_flow.tracing import RunTraceHandler
 
 # Tope de seguridad: a esta profundidad se deja de delegar y se lanza un
 # leaf por cada factura que quede, sin importar que haya dicho el LLM. Es
@@ -63,7 +64,7 @@ def _fallback_split(invoice_ids: list) -> list:
     return [invoice_ids[:mid], invoice_ids[mid:]]
 
 
-def _delegate_plan(invoice_ids: list, label: str, handler: RunTraceHandler,
+def _delegate_plan(invoice_ids: list, label: str, roxy: Roxy,
                     node_run_id, parent_run_id) -> list:
     llm = _make_llm()
     prompt = ChatPromptTemplate.from_messages([
@@ -75,11 +76,10 @@ def _delegate_plan(invoice_ids: list, label: str, handler: RunTraceHandler,
         {"invoices": json.dumps(invoice_ids, ensure_ascii=False)},
         config={
             "run_id": node_run_id,
-            "callbacks": [handler],
+            "callbacks": [roxy],
             "metadata": {
                 "parent_run_id": str(parent_run_id) if parent_run_id else None,
-                "purpose": f"Delegar: {label}",
-                "context": {"invoice_ids": invoice_ids},
+                "purpose": f"Delegar {len(invoice_ids)} facturas: {', '.join(invoice_ids)}",
             },
         },
     )
@@ -103,11 +103,12 @@ def _delegate_plan(invoice_ids: list, label: str, handler: RunTraceHandler,
     return groups if groups is not None else _fallback_split(invoice_ids)
 
 
-def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_run_id) -> dict:
+def _run_leaf(invoice_id: str, purpose: str, roxy: Roxy, parent_run_id) -> dict:
     accessed_by = f"agent-subtask-{invoice_id}"
     leaf_run_id = uuid4()
+
     llm = _make_llm()
-    tools = mongo_tools.build_tools(accessed_by=accessed_by, run_id=str(leaf_run_id))
+    tools = mongo_tools.build_tools(accessed_by=accessed_by, run_id=leaf_run_id, roxy=roxy)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SUBAGENT_SYSTEM_PROMPT),
@@ -122,11 +123,10 @@ def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_ru
             {"invoice_id": invoice_id, "input": purpose},
             config={
                 "run_id": leaf_run_id,
-                "callbacks": [handler],
+                "callbacks": [roxy],
                 "metadata": {
                     "parent_run_id": str(parent_run_id) if parent_run_id else None,
-                    "purpose": purpose,
-                    "context": {"invoice_id": invoice_id, "accessed_by": accessed_by},
+                    "purpose": f"Conciliar {invoice_id}: {purpose}",
                 },
             },
         )
@@ -140,39 +140,47 @@ def _run_leaf(invoice_id: str, purpose: str, handler: RunTraceHandler, parent_ru
         "invoice_id": invoice_id,
         "accessed_by": accessed_by,
         "run_id": str(leaf_run_id),
+        "agent_id": roxy.agent_id_for(leaf_run_id),
         "depth": None,  # lo completa _run_node
         "output": output_text,
     }
 
 
-def _run_node(invoice_ids: list, task_text: str, handler: RunTraceHandler,
+def _run_node(invoice_ids: list, task_text: str, roxy: Roxy,
               parent_run_id, depth: int, label: str = None) -> list:
     label = label or task_text
 
     if len(invoice_ids) == 1 or depth >= MAX_DEPTH:
         leaves = []
         for inv in invoice_ids:
-            leaf = _run_leaf(inv, task_text, handler, parent_run_id)
+            leaf = _run_leaf(inv, task_text, roxy, parent_run_id)
             leaf["depth"] = depth
             leaves.append(leaf)
         return leaves
 
     node_run_id = uuid4()
-    groups = _delegate_plan(invoice_ids, label, handler, node_run_id, parent_run_id)
+    groups = _delegate_plan(invoice_ids, label, roxy, node_run_id, parent_run_id)
 
     results = []
     for group in groups:
         group_label = f"{label} / sub-grupo {', '.join(group)}"
-        results.extend(_run_node(group, task_text, handler, node_run_id, depth + 1, group_label))
+        results.extend(_run_node(group, task_text, roxy, node_run_id, depth + 1,
+                                 group_label))
     return results
 
 
 def run_task(task: str) -> dict:
-    handler = RunTraceHandler()
+    """Una sola instancia del SDK para toda la corrida: es la que arma el
+    arbol y la que somete cada escritura al veredicto de Roxy."""
+    roxy = Roxy(
+        api_url=config.DASHBOARD_API_URL,
+        gateway_url=config.ROXY_URL,
+        mcp_name=config.ROXY_MCP_NAME,
+    )
 
     invoices = mongo_tools.list_issued_invoices()
     invoice_ids = [d["_id"] for d in invoices]
 
-    results = _run_node(invoice_ids, task, handler, parent_run_id=None, depth=0)
+    results = _run_node(invoice_ids, task, roxy, parent_run_id=None, depth=0)
 
-    return {"results": results}
+    return {"session_id": roxy.session_id, "results": results, "roxy": roxy}
