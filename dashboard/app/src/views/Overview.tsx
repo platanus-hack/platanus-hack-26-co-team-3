@@ -29,7 +29,7 @@ export function Overview({ logs, onSelect }: OverviewProps) {
         <div className="stat-card" style={{ borderColor: 'var(--green-border)' }}>
           <div className="stat-label">
             <CheckCircleIcon />
-            Approved
+            Aprobadas
           </div>
           <div className="stat-value" style={{ color: 'var(--green)' }}>
             {approvedCount}
@@ -38,7 +38,7 @@ export function Overview({ logs, onSelect }: OverviewProps) {
         <div className="stat-card" style={{ borderColor: 'var(--red-border)', background: 'var(--red-bg)' }}>
           <div className="stat-label">
             <AlertTriangleIcon />
-            Denied
+            Bloqueadas
           </div>
           <div className="stat-value" style={{ color: 'var(--red)' }}>
             {denied.length}

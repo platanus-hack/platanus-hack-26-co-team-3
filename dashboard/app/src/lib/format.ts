@@ -1,11 +1,15 @@
 import { parseApiDate } from './time'
 
-const timeFormatter = new Intl.DateTimeFormat('en-US', {
+// The whole UI is in Spanish for the demo -- times and "hace 3 minutos" have
+// to match, or half the screen reads as a different product.
+const LOCALE = 'es-CO'
+
+const timeFormatter = new Intl.DateTimeFormat(LOCALE, {
   hour: 'numeric',
   minute: '2-digit',
 })
 
-const fullTimeFormatter = new Intl.DateTimeFormat('en-US', {
+const fullTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
@@ -22,7 +26,7 @@ export function formatFullTime(iso: string): string {
   return fullTimeFormatter.format(parseApiDate(iso))
 }
 
-const relativeFormatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' })
+const relativeFormatter = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
 
 export function formatRelativeTime(iso: string): string {
   const diffMs = parseApiDate(iso).getTime() - Date.now()
