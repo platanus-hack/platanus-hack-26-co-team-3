@@ -4,6 +4,8 @@
     "mcpName": "mongo-catalog-mcp",
     "time": "2026-08-20T09:15:00Z",
     "accessedBy": "agent-orchestrator-01",
+    "action": "read_query",
+    "violatedRule": null,
     "description": "Read-only query on 'orders' approved per rule priority 2"
   },
   {
@@ -11,6 +13,11 @@
     "mcpName": "payments-mcp",
     "time": "2026-08-20T09:17:32Z",
     "accessedBy": "agent-subtask-07",
+    "action": "write_transaction",
+    "violatedRule": {
+      "priority": 1,
+      "instruction": "deny writes to 'transactions' from non-orchestrator agents"
+    },
     "description": "Attempted write to 'transactions' denied — rule priority 1 violation"
   },
   {
@@ -18,6 +25,8 @@
     "mcpName": "inventory-mcp",
     "time": "2026-08-20T10:02:11Z",
     "accessedBy": "agent-orchestrator-01",
+    "action": "read_stock",
+    "violatedRule": null,
     "description": "Stock read approved per rule priority 1"
   },
   {
@@ -25,6 +34,11 @@
     "mcpName": "inventory-mcp",
     "time": "2026-08-20T10:05:47Z",
     "accessedBy": "agent-subtask-12",
+    "action": "bulk_stock_adjustment",
+    "violatedRule": {
+      "priority": 2,
+      "instruction": "deny bulk stock adjustments above 1000 units"
+    },
     "description": "Bulk stock adjustment of 5000 units denied — rule priority 2 violation"
   },
   {
@@ -32,6 +46,11 @@
     "mcpName": "payments-mcp",
     "time": "2026-08-20T11:20:03Z",
     "accessedBy": "agent-subtask-03",
+    "action": "process_refund",
+    "violatedRule": {
+      "priority": 2,
+      "instruction": "require explicit intent confirmation for refunds"
+    },
     "description": "Refund attempted without intent confirmation — rule priority 2 violation"
   }
 ]

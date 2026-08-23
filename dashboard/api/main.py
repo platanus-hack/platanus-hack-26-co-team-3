@@ -7,19 +7,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import DESCENDING
 
 from db import get_security_collection
-from models import SecurityLog, SecurityStatus
+from models import SecurityLog, SecurityLogCreate, SecurityStatus
 
 app = FastAPI(title="Roxy Dashboard API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
 
-@app.get("/security-logs", response_model=list[SecurityLog])
+@app.get("/log", response_model=list[SecurityLog])
 def list_security_logs(
     status: Optional[SecurityStatus] = None,
     mcp_id: Optional[str] = Query(default=None, alias="mcpId"),
@@ -53,3 +53,21 @@ def list_security_logs(
             doc["mcpId"] = str(doc["mcpId"])
         logs.append(SecurityLog.model_validate(doc))
     return logs
+
+
+@app.post("/log", status_code=201, response_model=SecurityLog)
+def create_security_log(payload: SecurityLogCreate):
+    doc = payload.model_dump(by_alias=True, exclude={"mcp_id"})
+    if payload.mcp_id is not None:
+        try:
+            doc["mcpId"] = ObjectId(payload.mcp_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="mcpId is not a valid ObjectId")
+
+    collection = get_security_collection()
+    result = collection.insert_one(doc)
+
+    doc["_id"] = str(result.inserted_id)
+    if doc.get("mcpId") is not None:
+        doc["mcpId"] = str(doc["mcpId"])
+    return SecurityLog.model_validate(doc)

@@ -10,6 +10,13 @@ class SecurityStatus(str, Enum):
     denied = "denied"
 
 
+class ViolatedRule(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    priority: int
+    instruction: str
+
+
 class SecurityLog(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -19,4 +26,19 @@ class SecurityLog(BaseModel):
     mcp_name: Optional[str] = Field(default=None, alias="mcpName")
     time: datetime
     accessed_by: str = Field(alias="accessedBy")
+    action: Optional[str] = None
+    violated_rule: Optional[ViolatedRule] = Field(default=None, alias="violatedRule")
     description: str
+
+
+class SecurityLogCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    status: SecurityStatus
+    mcp_id: Optional[str] = Field(default=None, alias="mcpId")
+    mcp_name: Optional[str] = Field(default=None, alias="mcpName")
+    accessed_by: str = Field(alias="accessedBy")
+    action: Optional[str] = None
+    violated_rule: Optional[ViolatedRule] = Field(default=None, alias="violatedRule")
+    description: str
+    time: datetime

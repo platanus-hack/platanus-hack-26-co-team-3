@@ -31,7 +31,7 @@ LAN/bridge IP or put both containers on the same Docker network.
 
 ## Endpoints
 
-### `GET /security-logs`
+### `GET /log`
 
 Queries the `security` collection and returns matching logs, each validated
 against a Pydantic model.
@@ -45,3 +45,25 @@ Query params (all optional):
 - `skip` — pagination offset (default 0)
 
 Results are sorted by `time` descending.
+
+### `POST /log`
+
+Creates a security log entry. This is what `roxy-gateway`'s `DASHBOARD_URL`
+should point at. Body:
+
+```json
+{
+  "status": "denied",
+  "mcpName": "mongo-catalog-mcp",
+  "mcpId": "6a89974fe413c1e675df5b82",
+  "accessedBy": "agent-subtask-07",
+  "action": "drop_table",
+  "violatedRule": { "priority": 1, "instruction": "deny any write operation outside working hours" },
+  "description": "Dropping a table is a write/destructive operation, denied by priority 1 rule.",
+  "time": "2026-08-22T12:00:00Z"
+}
+```
+
+`mcpId`, `mcpName`, `action`, and `violatedRule` are all optional. `violatedRule`
+should be `null`/omitted for `approved` logs and set for `denied` ones. Returns
+the created log (201) or 400 if `mcpId` isn't a valid ObjectId.
