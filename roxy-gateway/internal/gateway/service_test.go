@@ -63,13 +63,13 @@ func (f *fakeNotifier) Notify(_ context.Context, n dashboard.Notification) error
 	return f.err
 }
 
-type fakeCaller struct {
+type fakeAgent struct {
 	up    Upstream
 	err   error
 	calls int
 }
 
-func (f *fakeCaller) Invoke(context.Context, *mcp.MCP, string, []byte) (Upstream, error) {
+func (f *fakeAgent) CallMCP(context.Context, *mcp.MCP, string, []byte) (Upstream, error) {
 	f.calls++
 	return f.up, f.err
 }
@@ -164,8 +164,8 @@ func TestService_Evaluate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logs := &fakeLogs{}
 			notes := &fakeNotifier{err: tt.notifyErr}
-			caller := &fakeCaller{up: Upstream{StatusCode: 200, Body: []byte(`{"ok":true}`)}}
-			svc := New(tt.finder, logs, tt.eval, notes, caller)
+			agent := &fakeAgent{up: Upstream{StatusCode: 200, Body: []byte(`{"ok":true}`)}}
+			svc := New(tt.finder, logs, tt.eval, notes, agent)
 			svc.now = func() time.Time { return fixed }
 
 			got, err := svc.Evaluate(context.Background(), EvaluateRequest{
@@ -190,12 +190,12 @@ func TestService_Evaluate(t *testing.T) {
 			require.Equal(t, tt.wantStatus, notes.calls[0].Status)
 			if tt.wantDec == "approved" {
 				require.True(t, got.Allowed)
-				require.Equal(t, 1, caller.calls)
+				require.Equal(t, 1, agent.calls)
 				require.NotNil(t, got.Upstream)
 				require.JSONEq(t, `{"ok":true}`, string(got.Upstream.Body))
 			} else {
 				require.False(t, got.Allowed)
-				require.Equal(t, 0, caller.calls)
+				require.Equal(t, 0, agent.calls)
 				require.Nil(t, got.Upstream)
 			}
 			if tt.wantRule {

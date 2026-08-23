@@ -3,7 +3,6 @@ package gateway
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,7 +14,7 @@ import (
 )
 
 type MCPCaller interface {
-	Invoke(ctx context.Context, doc *mcp.MCP, action string, payload []byte) (Upstream, error)
+	Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) (Upstream, error)
 }
 
 type Upstream struct {
@@ -32,27 +31,21 @@ func NewMCPClient() *MCPClient {
 	return &MCPClient{httpClient: &http.Client{Timeout: 15 * time.Second}}
 }
 
-func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, action string, payload []byte) (Upstream, error) {
-	if doc.Server.URL == "" {
-		return Upstream{}, fmt.Errorf("%w: missing server url", policy.ErrUpstream)
+func (c *MCPClient) Invoke(ctx context.Context, doc *mcp.MCP, plan PlannedCall) (Upstream, error) {
+	if plan.URL == "" {
+		return Upstream{}, fmt.Errorf("%w: missing planned url", policy.ErrUpstream)
 	}
-	bodyPayload := json.RawMessage(payload)
-	if len(bytes.TrimSpace(bodyPayload)) == 0 {
-		bodyPayload = json.RawMessage("null")
+	var body io.Reader
+	if planHasBody(plan.Body) {
+		body = bytes.NewReader(plan.Body)
 	}
-	body, err := json.Marshal(map[string]any{
-		"action":  action,
-		"payload": bodyPayload,
-	})
+	req, err := http.NewRequestWithContext(ctx, plan.Method, plan.URL, body)
 	if err != nil {
 		return Upstream{}, fmt.Errorf("%w: %v", policy.ErrUpstream, err)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, doc.Server.URL, bytes.NewReader(body))
-	if err != nil {
-		return Upstream{}, fmt.Errorf("%w: %v", policy.ErrUpstream, err)
+	if planHasBody(plan.Body) {
+		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("Content-Type", "application/json")
 	setAuth(req, doc.Authorization)
 
 	res, err := c.httpClient.Do(req)

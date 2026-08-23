@@ -42,6 +42,11 @@ func handleEvaluate(svc EvaluatorService) gin.HandlerFunc {
 					"error":  "evaluator unavailable",
 					"detail": err.Error(),
 				})
+			case errors.Is(err, policy.ErrPlan):
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error":  "planner unavailable",
+					"detail": err.Error(),
+				})
 			case errors.Is(err, policy.ErrUpstream):
 				c.JSON(http.StatusBadGateway, gin.H{
 					"error":  "mcp unavailable",

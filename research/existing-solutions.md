@@ -65,6 +65,35 @@ de un MCP.
 Fuentes: [Meta AI Research — LlamaFirewall](https://ai.meta.com/research/publications/llamafirewall-an-open-source-guardrail-system-for-building-secure-ai-agents/) ·
 [arXiv:2505.03574](https://arxiv.org/pdf/2505.03574)
 
+## Workday Agent Passport — capa distinta, no un competidor directo
+
+Anunciado el 2 de junio de 2026: prueba y verifica cada agente de IA
+(propio o de terceros) **antes** de ponerlo en producción, con
+atestación firmada por un partner externo (lanzamiento con Cisco AI
+Defense, validando contra OWASP LLM Top 10 / NIST AI RMF / MITRE
+ATLAS). En runtime, monitorea y puede *allow/block/route* la acción de
+un agente, con revocación centralizada si aparece un problema.
+
+**Es una capa distinta a la de Roxy, no un competidor directo:** opera
+a nivel de *gobernanza de identidad del agente en la empresa*
+(¿este agente puede existir/actuar en absoluto, quién lo certificó?),
+no en la frontera de confianza A2A→MCP (¿esta acción puntual, contra
+esta regla puntual, se permite ahora mismo?). El press release **no
+menciona A2A ni MCP en ningún momento** — es ortogonal a los protocolos
+que le dan forma al problema que ataca Roxy. Ambas capas podrían
+convivir sin pisarse: Agent Passport decide qué agentes existen,
+Roxy decide qué pueden hacer en cada request.
+
+**Dato de validación de mercado, no de competencia:** Workday (11,500+
+organizaciones, 65%+ del Fortune 500) recién está en **acceso
+anticipado para el segundo semestre de 2026, con disponibilidad
+general proyectada para fin de año** — es un anuncio de roadmap, no un
+producto en producción. Un jugador de ese tamaño moviéndose *ahora* en
+gobernanza de agentes, y todavía sin embarcar nada, es evidencia a
+favor del timing del problema — no una razón para no construir Roxy.
+
+Fuente: [Workday Newsroom — Agent Passport launch](https://newsroom.workday.com/2026-06-02-Workday-Launches-Agent-Passport-to-Test,-Verify,-and-Continuously-Monitor-Every-AI-Agent-in-the-Enterprise)
+
 ## Hueco de posicionamiento
 
 Ningún actor encontrado hace exactamente lo que hace Roxy: tomar una regla
@@ -82,7 +111,10 @@ reglas de MCP.
 
 El hueco real: **autoría de política en lenguaje natural + interpretación
 por LLM en el momento**, específicamente en la frontera de confianza
-A2A→MCP.
+A2A→MCP. Workday Agent Passport confirma que ni siquiera los jugadores
+más grandes están tocando esa frontera todavía — están un nivel arriba,
+en gobernanza de identidad del agente, y ni siquiera ahí han llegado a
+producción.
 
 **Contracara honesta (no esconder esto en el pitch):** ese es exactamente
 el mismo punto que ya identificamos como debilidad de Roxy ("IA vigila

@@ -1,23 +1,23 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-08-22T00:00:00.000Z",
+  "__export_date": "2026-08-22T22:00:00.000Z",
   "__export_source": "roxy-gateway",
   "resources": [
     {
       "_id": "wrk_roxyGatewayV1",
       "parentId": null,
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Roxy Gateway",
-      "description": "V1 security gateway. POST /v1/evaluate against MCP rules in Mongo. Base URL defaults to http://localhost:8080.",
+      "description": "POST /v1/evaluate. Roxy llama al evaluator API; allowed → proxy al MCP (body crudo); denied → 403 vacío. Base URL http://localhost:8080 (o :3000 si el evaluator usa 8080).",
       "scope": "collection",
       "_type": "workspace"
     },
     {
       "_id": "env_roxyBase",
       "parentId": "wrk_roxyGatewayV1",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Base Environment",
       "data": {
@@ -36,7 +36,7 @@
     {
       "_id": "fld_health",
       "parentId": "wrk_roxyGatewayV1",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Health",
       "description": "",
@@ -48,10 +48,10 @@
     {
       "_id": "fld_evaluate",
       "parentId": "wrk_roxyGatewayV1",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Evaluate",
-      "description": "Happy-path allow/deny cases against the seeded mock MCPs.",
+      "description": "Allow/deny vía evaluator. Deny = 403 vacío. Allow = body crudo del MCP, o 502 si server.url no resuelve (mock mcp.internal).",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -2000,
@@ -60,10 +60,10 @@
     {
       "_id": "fld_errors",
       "parentId": "wrk_roxyGatewayV1",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "name": "Errors",
-      "description": "Validation and not-found responses (no evaluator call on 400).",
+      "description": "Validación y MCP inexistente (sin llamar al evaluator en 400).",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -1000,
@@ -72,7 +72,7 @@
     {
       "_id": "req_health",
       "parentId": "fld_health",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/health",
       "name": "GET /health",
@@ -95,11 +95,11 @@
     {
       "_id": "req_evalDenyDropTable",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Deny — drop table (mongo-catalog-mcp)",
-      "description": "DROP TABLE against mongo-catalog-mcp. Expected 200 decision=denied and a security log.",
+      "description": "DROP TABLE. Evaluator allowed=false. Expected 403 empty body. Log + dashboard notify. No llama al MCP.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -129,11 +129,11 @@
     {
       "_id": "req_evalAllowCatalogRead",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Allow — read orders (mongo-catalog-mcp)",
-      "description": "Read-only query on orders. Expected 200 decision=approved.",
+      "description": "Read-only on orders. Evaluator allowed=true. Roxy POST a server.url con Bearer. Expected body crudo del MCP, o 502 mientras url sea mcp.internal.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -163,11 +163,11 @@
     {
       "_id": "req_evalAllowInventoryRead",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Allow — read stock (inventory-mcp)",
-      "description": "Stock read for a delegated agent. Expected 200 decision=approved.",
+      "description": "Stock read. Evaluator allowed=true. Roxy POST a server.url con X-API-Key si authorization.type=apiKey. Body crudo del MCP, o 502 si mcp.internal.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -197,11 +197,11 @@
     {
       "_id": "req_evalDenyBulkStock",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Deny — bulk stock adjust (inventory-mcp)",
-      "description": "Bulk adjustment of 5000 units. Expected 200 decision=denied (rule: deny above 1000).",
+      "description": "Bulk 5000 units. Expected 403 empty (rule deny above 1000). No MCP call.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -231,11 +231,11 @@
     {
       "_id": "req_evalDenyPaymentsWrite",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Deny — write transactions (payments-mcp)",
-      "description": "Non-orchestrator write to transactions. Expected 200 decision=denied.",
+      "description": "Non-orchestrator write to transactions. Expected 403 empty. No MCP call.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -265,11 +265,11 @@
     {
       "_id": "req_evalDenyRefund",
       "parentId": "fld_evaluate",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "Deny — refund without intent (payments-mcp)",
-      "description": "Refund without explicit intent confirmation. Expected 200 decision=denied.",
+      "description": "Refund without intent confirmation. Expected 403 empty. No MCP call.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -299,11 +299,11 @@
     {
       "_id": "req_evalNotFound",
       "parentId": "fld_errors",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "404 — unknown MCP",
-      "description": "MCP name not in Mongo. Expected 404 {\"error\":\"mcp not found\"}. No security log.",
+      "description": "MCP name not in Mongo. Expected 404 {\"error\":\"mcp not found\"}. No evaluator, no log.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -333,7 +333,7 @@
     {
       "_id": "req_evalBadRequest",
       "parentId": "fld_errors",
-      "modified": 1755849600000,
+      "modified": 1755892800000,
       "created": 1755849600000,
       "url": "{{ _.base_url }}/v1/evaluate",
       "name": "400 — missing action",
