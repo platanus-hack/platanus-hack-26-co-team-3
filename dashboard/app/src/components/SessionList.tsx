@@ -11,24 +11,25 @@ interface SessionListProps {
 export function SessionList({ sessions, selectedSessionId, onSelect }: SessionListProps) {
   return (
     <div className="agents-sessions">
-      {sessions.length === 0 && <div className="empty-state">No agent sessions yet.</div>}
+      {sessions.length === 0 && <div className="empty-state">No runs recorded yet.</div>}
       {sessions.map((session) => {
         const tokens = outcomeTokens(session.outcome)
         const active = session.sessionId === selectedSessionId
         return (
-          <div
+          <button
             key={session.sessionId}
+            type="button"
             className={`session-card ${active ? 'active' : ''}`}
             onClick={() => onSelect(session.sessionId)}
           >
             <span className="status-dot" style={{ background: tokens.color }} />
-            <div className="session-card-body">
-              <div className="session-card-title">{session.rootPurpose}</div>
-              <div className="session-card-meta mono">
+            <span className="session-card-body">
+              <span className="session-card-title">{session.rootPurpose}</span>
+              <span className="session-card-meta mono">
                 {session.agentCount} agents &middot; {formatRelativeTime(session.startedAt)}
-              </div>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         )
       })}
     </div>

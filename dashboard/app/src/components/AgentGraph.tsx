@@ -1,27 +1,45 @@
-import { useMemo, useState } from 'react'
-import type { Agent } from '../types'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Agent, AgentSession } from '../types'
 import { ancestorChain, layoutTree, worstAgents } from '../lib/agentGraph'
 import { outcomeTokens } from '../lib/nodeStatus'
 import { ReplayIcon } from './icons'
 
 interface AgentGraphProps {
   agents: Agent[]
+  session: AgentSession | null
   selectedAgentId: string | null
   onSelectAgent: (agentId: string) => void
 }
 
-const NODE_WIDTH = 208
-const NODE_HEIGHT = 68
-const X_GAP = 36
-const Y_GAP = 64
-const REVEAL_STEP_MS = 220
+const NODE_WIDTH = 236
+const NODE_HEIGHT = 78
+const X_GAP = 40
+const Y_GAP = 74
+const REVEAL_STEP_MS = 200
 
-export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGraphProps) {
+export function AgentGraph({ agents, session, selectedAgentId, onSelectAgent }: AgentGraphProps) {
   const laidOut = useMemo(() => layoutTree(agents), [agents])
   const [replayKey, setReplayKey] = useState(0)
 
-  // No explicit selection yet: default to pre-highlighting the causal chain
-  // of whatever failed, so the story reads before anyone clicks anything.
+  // Nodes that arrive while a run is in flight should pop in on their own,
+  // not wait behind the stagger of everything already on screen. Only the
+  // batch present at first paint is staggered.
+  const seenIds = useRef<Set<string>>(new Set())
+  const sessionKey = session?.sessionId ?? null
+  const lastSessionKey = useRef<string | null>(null)
+  if (lastSessionKey.current !== sessionKey) {
+    lastSessionKey.current = sessionKey
+    seenIds.current = new Set()
+  }
+  const firstPaint = seenIds.current.size === 0
+
+  useEffect(() => {
+    agents.forEach((a) => seenIds.current.add(a._id))
+  }, [agents])
+
+  // With nothing selected, pre-highlight the chain that led to whatever went
+  // wrong. The story should be readable before anyone clicks -- on stage
+  // there is no time to go hunting for the bad node.
   const highlighted = useMemo(() => {
     if (selectedAgentId) return new Set(ancestorChain(agents, selectedAgentId))
     const worst = worstAgents(agents)
@@ -30,6 +48,16 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
 
   const hasHighlight = highlighted.size > 0
   const byId = useMemo(() => new Map(laidOut.map((a) => [a._id, a])), [laidOut])
+
+  const counts = useMemo(() => {
+    let denied = 0
+    let errored = 0
+    for (const a of agents) {
+      if (a.outcome === 'denied') denied += 1
+      if (a.outcome === 'error') errored += 1
+    }
+    return { denied, errored }
+  }, [agents])
 
   const maxDepth = laidOut.reduce((m, a) => Math.max(m, a.depth), 0)
   const maxX = laidOut.reduce((m, a) => Math.max(m, a.x), 0)
@@ -46,7 +74,7 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
   if (agents.length === 0) {
     return (
       <div className="agents-canvas">
-        <div className="empty-state">Select a session to see its agent tree.</div>
+        <div className="empty-state">No agents recorded for this run yet.</div>
       </div>
     )
   }
@@ -54,14 +82,29 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
   return (
     <div className="agents-canvas">
       <div className="graph-toolbar">
-        <button type="button" className="replay-btn" onClick={() => setReplayKey((k) => k + 1)}>
+        <div className="graph-summary">
+          <span className="graph-summary-main">{agents.length} agents</span>
+          {counts.denied > 0 && (
+            <span className="graph-chip denied">{counts.denied} blocked by Roxy</span>
+          )}
+          {counts.errored > 0 && <span className="graph-chip error">{counts.errored} failed</span>}
+          {counts.denied === 0 && counts.errored === 0 && (
+            <span className="graph-chip clean">nothing blocked</span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="replay-btn"
+          onClick={() => setReplayKey((k) => k + 1)}
+          title="Replay the reveal in the order the agents actually ran"
+        >
           <ReplayIcon />
           Replay
         </button>
       </div>
 
       <div className="graph-scroll">
-        <div className="graph-surface" style={{ width, height }} key={replayKey}>
+        <div className="graph-surface" style={{ width, height }} key={`${sessionKey}-${replayKey}`}>
           <svg className="graph-edges" width={width} height={height}>
             {laidOut.map((agent) => {
               if (agent.parentId === null) return null
@@ -71,6 +114,7 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
               const to = nodeCenter(agent)
               const midY = (from.cy + to.cy) / 2
               const isAncestorEdge = highlighted.has(agent._id) && highlighted.has(parent._id)
+              const delay = firstPaint ? agent.revealIndex * REVEAL_STEP_MS : 0
               return (
                 <path
                   key={agent._id}
@@ -81,7 +125,7 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
                     to.cy - NODE_HEIGHT / 2
                   }`}
                   pathLength={1}
-                  style={{ animationDelay: `${agent.revealIndex * REVEAL_STEP_MS}ms` }}
+                  style={{ animationDelay: `${delay}ms` }}
                 />
               )
             })}
@@ -92,7 +136,9 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
             const isFlagged = agent.outcome === 'denied' || agent.outcome === 'error'
             const isAncestor = highlighted.has(agent._id)
             const isDimmed = hasHighlight && !isAncestor
+            const isRoot = agent.parentId === null
             const { cx, cy } = nodeCenter(agent)
+            const delay = firstPaint ? agent.revealIndex * REVEAL_STEP_MS : 0
             return (
               <button
                 key={agent._id}
@@ -100,6 +146,7 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
                 className={[
                   'graph-node-card',
                   agent.outcome && `outcome-${agent.outcome}`,
+                  isRoot && 'is-root',
                   isFlagged && 'is-flagged',
                   isAncestor && 'is-ancestor',
                   isDimmed && 'is-dimmed',
@@ -111,17 +158,21 @@ export function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGrap
                   left: cx - NODE_WIDTH / 2,
                   top: cy - NODE_HEIGHT / 2,
                   width: NODE_WIDTH,
-                  height: NODE_HEIGHT,
-                  borderColor: tokens.border,
-                  background: tokens.bg,
-                  animationDelay: `${agent.revealIndex * REVEAL_STEP_MS}ms`,
+                  minHeight: NODE_HEIGHT,
+                  animationDelay: `${delay}ms`,
                 }}
                 onClick={() => onSelectAgent(agent._id)}
               >
-                <span className="graph-node-purpose">{agent.purpose}</span>
-                <span className="node-type-pill" style={{ color: tokens.color }}>
-                  {tokens.label}
+                <span className="graph-node-role">
+                  {isRoot ? 'Orchestrator' : `Depth ${agent.depth}`}
                 </span>
+                <span className="graph-node-purpose">{agent.purpose}</span>
+                {agent.outcome && (
+                  <span className="node-outcome-pill" style={{ color: tokens.color }}>
+                    <span className="node-outcome-dot" style={{ background: tokens.color }} />
+                    {tokens.label}
+                  </span>
+                )}
               </button>
             )
           })}

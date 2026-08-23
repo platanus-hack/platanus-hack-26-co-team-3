@@ -1,17 +1,20 @@
 import type { MouseEvent } from 'react'
-import type { Agent } from '../types'
+import type { Agent, SecurityLog } from '../types'
 import { ancestorChain } from '../lib/agentGraph'
 import { outcomeTokens } from '../lib/nodeStatus'
+import { formatFullTime } from '../lib/format'
 import { CloseIcon } from './icons'
 
 interface NodeDrawerProps {
   agent: Agent | null
   agents: Agent[]
+  /** Roxy decisions correlated to this agent, newest first. */
+  decisions: SecurityLog[]
   onClose: () => void
   onSelectAgent: (agentId: string) => void
 }
 
-export function NodeDrawer({ agent, agents, onClose, onSelectAgent }: NodeDrawerProps) {
+export function NodeDrawer({ agent, agents, decisions, onClose, onSelectAgent }: NodeDrawerProps) {
   if (!agent) return null
   const tokens = outcomeTokens(agent.outcome)
   const chain = ancestorChain(agents, agent._id)
@@ -39,17 +42,41 @@ export function NodeDrawer({ agent, agents, onClose, onSelectAgent }: NodeDrawer
         <div className="drawer-title">{agent.purpose}</div>
 
         <div className="drawer-fields">
-          <div className="drawer-field">
-            <div className="drawer-field-label">Agent ID</div>
-            <div className="drawer-field-value mono muted">{agent._id}</div>
-          </div>
-          <div className="drawer-field">
-            <div className="drawer-field-label">Session</div>
-            <div className="drawer-field-value mono muted">{agent.sessionId}</div>
-          </div>
+          {decisions.length > 0 && (
+            <div className="drawer-field">
+              <div className="drawer-field-label">
+                What Roxy decided &middot; {decisions.length}{' '}
+                {decisions.length === 1 ? 'decision' : 'decisions'}
+              </div>
+              <div className="decision-list">
+                {decisions.map((log) => {
+                  const denied = log.status === 'denied'
+                  return (
+                    <div key={log._id} className={`decision-card ${denied ? 'denied' : 'approved'}`}>
+                      <div className="decision-top">
+                        <span className="decision-verdict">{denied ? 'Blocked' : 'Allowed'}</span>
+                        <span className="decision-time mono">{formatFullTime(log.time)}</span>
+                      </div>
+                      <div className="decision-reason">{log.description}</div>
+                      {log.violatedRule && (
+                        <div className="decision-rule">
+                          <span className="decision-rule-priority">
+                            Rule {log.violatedRule.priority}
+                          </span>
+                          {log.violatedRule.instruction}
+                        </div>
+                      )}
+                      {log.action && <div className="decision-action mono">{log.action}</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {chain.length > 1 && (
             <div className="drawer-field">
-              <div className="drawer-field-label">Causal chain</div>
+              <div className="drawer-field-label">Who asked for this</div>
               <div className="breadcrumb-list">
                 {chain.map((id, i) => {
                   const node = byId.get(id)
@@ -70,6 +97,15 @@ export function NodeDrawer({ agent, agents, onClose, onSelectAgent }: NodeDrawer
               </div>
             </div>
           )}
+
+          <div className="drawer-field">
+            <div className="drawer-field-label">Agent ID</div>
+            <div className="drawer-field-value mono muted">{agent._id}</div>
+          </div>
+          <div className="drawer-field">
+            <div className="drawer-field-label">Run</div>
+            <div className="drawer-field-value mono muted">{agent.sessionId}</div>
+          </div>
         </div>
       </div>
     </div>
