@@ -22,6 +22,23 @@ cp .env.example .env   # completar ANTHROPIC_API_KEY
 python3 scripts/register_invoices_mcp.py   # una vez, mientras Mongo esté arriba
 ```
 
+## Tests
+
+```bash
+python3 -m pytest tests/ -q
+```
+
+36 tests, sin servicios levantados (HTTP y Mongo mockeados). Cubren la
+traducción de la respuesta de Roxy a permiso/negación, el corte por
+denegaciones, el reparto recursivo de facturas y la reconstrucción del
+árbol de delegación.
+
+## Chequeo previo
+
+`run_demo.py` verifica Mongo, `demo-api` y (con `--roxy on`) el gateway y
+el MCP registrado antes de gastar tokens, y aborta con el comando exacto
+que falta en vez de un traceback.
+
 ## Correr
 
 ```bash

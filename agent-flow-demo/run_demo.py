@@ -35,13 +35,19 @@ def main():
     # una sola vez al cargar el modulo.
     os.environ["ROXY_ENABLED"] = "true" if args.roxy == "on" else "false"
 
-    from agent_flow import config, seed_injection
+    from agent_flow import config, preflight, seed_injection
     from agent_flow.orchestrator import run_task
 
     if not config.ANTHROPIC_API_KEY:
         sys.exit("ANTHROPIC_API_KEY no esta seteado (agent-flow-demo/.env)")
 
     print(f"=== Corrida con Roxy {'ON' if config.ROXY_ENABLED else 'OFF'} ===\n")
+
+    problema = preflight.report(
+        preflight.run_all(DEMO_API_URL, with_roxy=config.ROXY_ENABLED)
+    )
+    if problema:
+        sys.exit(problema)
 
     print("Reseteando demo-api a datos limpios...")
     requests.post(f"{DEMO_API_URL}/admin/reset", timeout=10)
