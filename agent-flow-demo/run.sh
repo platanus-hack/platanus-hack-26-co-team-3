@@ -2,7 +2,7 @@
 # Corre el flujo agentico contra un gateway de Roxy, resolviendo el venv y
 # las dependencias antes de arrancar.
 #
-#   ./run.sh off                  sin Roxy (los subagentes escriben directo)
+#   ./run.sh off                  sin Roxy (nadie evalua ni registra nada)
 #   ./run.sh on                   con Roxy desplegada (roxygt.lat/gateway)
 #   ./run.sh on --local           con Roxy en localhost:8080
 #   ./run.sh on --dashboard-local traza contra dashboard/api en localhost:8000
