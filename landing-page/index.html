@@ -143,6 +143,30 @@ pre{
 .chip{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:4px 10px;border-radius:999px;
   background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line)}
 
+
+/* audit -- evidencia primero: el veredicto formal como artefacto, no como claim */
+.audit{margin-top:46px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--surface)}
+.audit-cmd{padding:15px 22px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink);
+  background:var(--bg);display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.audit-cmd .dollar{color:var(--accent);font-weight:500}
+.audit-body{padding:22px;display:flex;flex-direction:column;gap:14px}
+.proof{border:1px solid var(--line);border-radius:14px;padding:19px}
+.proof.fail{border-color:color-mix(in srgb,var(--danger) 40%,transparent);background:var(--danger-soft)}
+.proof.ok{border-color:color-mix(in srgb,var(--ok) 32%,transparent)}
+.proof-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.proof-x{color:var(--danger);font-size:19px;font-weight:700;line-height:1}
+.proof-c{color:var(--ok);font-size:17px;font-weight:700;line-height:1}
+.proof-name{font-size:14.5px;font-weight:500;color:var(--ink)}
+.proof-verdict{font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.1em;
+  padding:3px 9px;border-radius:999px}
+.proof-verdict.fail{color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent)}
+.proof-desc{font-size:14.5px;margin-top:10px;line-height:1.55}
+.proof-cex{margin-top:13px;font-size:12.5px;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:9px;padding:11px 13px;overflow-x:auto;white-space:nowrap}
+.proof-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:700px){.proof-row{grid-template-columns:1fr}}
+.audit-foot{padding:18px 22px;border-top:1px solid var(--line);font-size:14px;color:var(--muted);background:var(--bg)}
+
 /* cta */
 .cta{text-align:center;padding:96px 0}
 .cta h2{font-size:clamp(30px,4.4vw,46px);font-weight:700;max-width:18ch;margin:0 auto}
@@ -303,28 +327,60 @@ decision = roxy.guard(
 
 <section id="tecnico"><div class="wrap">
   <div class="sec-head">
-    <div class="eyebrow">Bajo el capó</div>
-    <h2>La decisión no la toma un modelo de lenguaje.</h2>
+    <div class="eyebrow">Verificación formal</div>
+    <h2>Escribiste tus reglas. ¿Y si tienen un hueco?</h2>
     <p>
-      Un LLM traduce tu regla a una política formal <em>una sola vez</em>. De ahí en adelante
-      la decisión corre sobre esa política congelada: mismo input, mismo veredicto, siempre.
+      Un LLM puede decirte si <em>esta</em> petición viola <em>esta</em> regla. No puede
+      decirte si el conjunto de reglas que escribiste deja pasar algo destructivo.
+      Eso no se opina: se demuestra.
     </p>
   </div>
+
+  <div class="audit">
+    <div class="audit-cmd mono"><span class="dollar">POST</span> /audit &nbsp;<span class="c-com">— tus reglas, antes de que corra un solo agente</span></div>
+    <div class="audit-body">
+      <div class="proof fail">
+        <div class="proof-head">
+          <span class="proof-x">✕</span>
+          <span class="proof-name mono">noDestructiveBypass</span>
+          <span class="proof-verdict fail">NO SE SOSTIENE</span>
+        </div>
+        <p class="proof-desc">Existe una acción destructiva que se cuela por tus reglas. Z3 no lo estima: construye el caso exacto.</p>
+        <div class="proof-cex mono">contraejemplo: op_class=destructive · collection=invoices · within_hours=true</div>
+      </div>
+      <div class="proof-row">
+        <div class="proof ok">
+          <div class="proof-head"><span class="proof-c">✓</span><span class="proof-name mono">deadRules</span></div>
+          <p class="proof-desc">Reglas que escribiste y nunca se pueden activar. Ninguna acá.</p>
+        </div>
+        <div class="proof ok">
+          <div class="proof-head"><span class="proof-c">✓</span><span class="proof-name mono">conflicts</span></div>
+          <p class="proof-desc">Reglas de igual prioridad que se contradicen. Ninguna acá.</p>
+        </div>
+      </div>
+    </div>
+    <div class="audit-foot">
+      El mismo motor decide en runtime. Sin LLM en el camino: la política queda
+      congelada y hasheada, y evaluarla dos veces con la misma entrada da el mismo
+      veredicto, byte por byte.
+    </div>
+  </div>
+
   <div class="tech">
     <div class="tech-card">
-      <span class="chip">determinista</span>
-      <h3>Motor sin LLM en el camino</h3>
-      <p>La política queda congelada y hasheada. Evaluarla dos veces con la misma entrada da el mismo resultado, byte por byte.</p>
+      <span class="chip">Rust · Z3 SMT</span>
+      <h3>Auditoría, no opinión</h3>
+      <p>El motor traduce tus reglas a lógica formal y busca activamente un hueco. Si lo encuentra, te da el contraejemplo — no un score de confianza.</p>
     </div>
     <div class="tech-card">
-      <span class="chip">Z3 · SMT</span>
-      <h3>Invariantes demostradas</h3>
-      <p>No solo se testean: se prueban. El motor muestra el contraejemplo concreto de cómo se rompería una invariante sin la regla que la protege.</p>
+      <span class="chip">reproducible</span>
+      <h3>Mismo input, mismo veredicto</h3>
+      <p>El LLM traduce la regla una sola vez. La decisión corre sobre esa política congelada, así que un tercero puede re-ejecutarla y obtener lo mismo.</p>
     </div>
     <div class="tech-card">
       <span class="chip">Solana · SAS</span>
-      <h3>Veredictos anclados on-chain</h3>
-      <p>Cada decisión queda con su huella en cadena. Ni nosotros podemos reescribir después lo que pasó — cualquiera puede re-verificarlo.</p>
+      <h3>Anclado on-chain</h3>
+      <p>Cada veredicto queda con su huella en cadena, aprobado o denegado. Probar que algo peligroso se detuvo vale tanto como haberlo detenido.</p>
     </div>
   </div>
 </div></section>
