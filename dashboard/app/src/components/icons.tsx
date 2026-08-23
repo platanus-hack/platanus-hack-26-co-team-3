@@ -87,3 +87,12 @@ export function LiveIcon() {
     </svg>
   )
 }
+
+export function CompareIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+      <rect x="2.5" y="3.5" width="6" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="11.5" y="3.5" width="6" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}

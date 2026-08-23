@@ -1343,3 +1343,85 @@ code {
   .decision-item { flex-direction: column; gap: 10px; }
   .decision-item-side { flex-direction: row; align-items: center; gap: 10px; text-align: left; }
 }
+
+/* Compare -- the same run twice, side by side. The whole point is that the
+   two columns are identical in shape and differ only in outcome. */
+
+.compare-view { max-width: none; padding-right: 30px; }
+.compare-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+
+.compare-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+
+.compare-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.compare-col.bad { border-color: var(--red-border); }
+.compare-col.good { border-color: var(--green-border); }
+
+.compare-col-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.compare-col.bad .compare-col-head { background: var(--red-bg); }
+.compare-col.good .compare-col-head { background: var(--green-bg); }
+
+.compare-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.compare-verdict {
+  font-size: 27px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin-top: 7px;
+  letter-spacing: -0.5px;
+}
+
+.compare-col.bad .compare-verdict { color: var(--red); }
+.compare-col.good .compare-verdict { color: var(--green); }
+
+.compare-meta { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+
+/* The graph fills the column instead of sitting in its own bordered card. */
+.compare-col .agents-canvas {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.compare-foot {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1000px) {
+  .compare-body { grid-template-columns: 1fr; }
+  .compare-col { min-height: 460px; }
+}

@@ -8,6 +8,7 @@ import { Overview } from './views/Overview'
 import { Logs } from './views/Logs'
 import { Agents } from './views/Agents'
 import { Live } from './views/Live'
+import { Compare } from './views/Compare'
 
 function App() {
   const [view, setView] = useState<View>('live')
@@ -53,6 +54,7 @@ function App() {
       {status === 'ready' && view === 'overview' && <Overview logs={logs} onSelect={setSelected} />}
       {status === 'ready' && view === 'logs' && <Logs logs={logs} onSelect={setSelected} />}
       {view === 'live' && <Live logs={logs} />}
+      {view === 'compare' && <Compare logs={logs} />}
       {view === 'agents' && <Agents logs={logs} />}
 
       <LogDrawer log={selected} onClose={() => setSelected(null)} />

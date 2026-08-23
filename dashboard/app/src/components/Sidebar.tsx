@@ -1,6 +1,6 @@
-import { AgentsNavIcon, GridIcon, ListIcon, LiveIcon } from './icons'
+import { AgentsNavIcon, CompareIcon, GridIcon, ListIcon, LiveIcon } from './icons'
 
-export type View = 'live' | 'overview' | 'logs' | 'agents'
+export type View = 'live' | 'compare' | 'overview' | 'logs' | 'agents'
 
 interface SidebarProps {
   view: View
@@ -23,6 +23,14 @@ export function Sidebar({ view, onNavigate }: SidebarProps) {
         >
           <LiveIcon />
           Live
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${view === 'compare' ? 'active' : ''}`}
+          onClick={() => onNavigate('compare')}
+        >
+          <CompareIcon />
+          Comparar
         </button>
         <button
           type="button"
