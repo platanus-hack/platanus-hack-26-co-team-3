@@ -6,7 +6,7 @@
   "project-oneliner-spanish": "El agente de seguridad entre tus agentes y tus MCPs.",
 
   // Brief description of your project (in Spanish).
-  "project-description-spanish": "En flujos A2A, un subagente puede tocar datos sensibles en un MCP sin que el orquestador se entere. Roxy se pone delante: carga las reglas del MCP, evalúa la intención con un LLM, permite o niega el acceso, inyecta credenciales solo si aprueba, y deja un rastro de cada intento.",
+  "project-description-spanish": "En flujos A2A, un subagente puede tocar datos sensibles en un MCP sin que el orquestador se entere. Roxy se pone delante: carga las reglas del MCP, evalúa la intención con un LLM y un proceso matematico de verificación, permite o niega el acceso, inyecta credenciales solo si aprueba, y deja un rastro de cada intento.",
 
   // Public URL where your project is deployed and running.
   // Must be a valid URL, for example: https://my-project.vercel.app
