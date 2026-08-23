@@ -41,11 +41,13 @@ func main() {
 
 	db := client.Database(cfg.MongoDBName)
 	log.Printf("evaluator: %s", cfg.EvaluatorURL)
+	log.Printf("planner: anthropic model=%s", cfg.AnthropicModel)
 	svc := gateway.New(
 		mcp.NewRepository(db),
 		security.NewRepository(db),
 		policy.NewRemoteClient(cfg.EvaluatorURL),
 		dashboard.NewClient(cfg.DashboardURL),
+		gateway.NewAnthropicPlanner(cfg.AnthropicBaseURL, cfg.AnthropicAPIKey, cfg.AnthropicModel),
 		gateway.NewMCPClient(),
 	)
 

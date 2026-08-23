@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrUnavailable = errors.New("evaluator unavailable")
+	ErrPlan        = errors.New("mcp request planner unavailable")
 	ErrUpstream    = errors.New("mcp upstream unavailable")
 )
 

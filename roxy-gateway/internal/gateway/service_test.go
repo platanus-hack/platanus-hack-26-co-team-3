@@ -67,11 +67,24 @@ type fakeCaller struct {
 	up    Upstream
 	err   error
 	calls int
+	last  PlannedCall
 }
 
-func (f *fakeCaller) Invoke(context.Context, *mcp.MCP, string, []byte) (Upstream, error) {
+func (f *fakeCaller) Invoke(_ context.Context, _ *mcp.MCP, plan PlannedCall) (Upstream, error) {
 	f.calls++
+	f.last = plan
 	return f.up, f.err
+}
+
+type fakePlanner struct {
+	plan  PlannedCall
+	err   error
+	calls int
+}
+
+func (f *fakePlanner) Plan(context.Context, *mcp.MCP, string, []byte) (PlannedCall, error) {
+	f.calls++
+	return f.plan, f.err
 }
 
 func catalogMCP() *mcp.MCP {
@@ -165,7 +178,8 @@ func TestService_Evaluate(t *testing.T) {
 			logs := &fakeLogs{}
 			notes := &fakeNotifier{err: tt.notifyErr}
 			caller := &fakeCaller{up: Upstream{StatusCode: 200, Body: []byte(`{"ok":true}`)}}
-			svc := New(tt.finder, logs, tt.eval, notes, caller)
+			planner := &fakePlanner{plan: PlannedCall{Method: "POST", URL: "https://mcp.internal/mongo-catalog/tools/call"}}
+			svc := New(tt.finder, logs, tt.eval, notes, planner, caller)
 			svc.now = func() time.Time { return fixed }
 
 			got, err := svc.Evaluate(context.Background(), EvaluateRequest{
@@ -190,11 +204,14 @@ func TestService_Evaluate(t *testing.T) {
 			require.Equal(t, tt.wantStatus, notes.calls[0].Status)
 			if tt.wantDec == "approved" {
 				require.True(t, got.Allowed)
+				require.Equal(t, 1, planner.calls)
 				require.Equal(t, 1, caller.calls)
+				require.Equal(t, "https://mcp.internal/mongo-catalog/tools/call", caller.last.URL)
 				require.NotNil(t, got.Upstream)
 				require.JSONEq(t, `{"ok":true}`, string(got.Upstream.Body))
 			} else {
 				require.False(t, got.Allowed)
+				require.Equal(t, 0, planner.calls)
 				require.Equal(t, 0, caller.calls)
 				require.Nil(t, got.Upstream)
 			}

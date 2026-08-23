@@ -61,6 +61,13 @@ func TestEvaluateHandler(t *testing.T) {
 			wantBody:   `"error":"evaluator unavailable"`,
 		},
 		{
+			name:       "503 planner",
+			body:       validBody,
+			svc:        stubService{err: policy.ErrPlan},
+			wantStatus: http.StatusServiceUnavailable,
+			wantBody:   `"error":"planner unavailable"`,
+		},
+		{
 			name: "403 denied has empty body",
 			body: validBody,
 			svc: stubService{resp: gateway.EvaluateResponse{
