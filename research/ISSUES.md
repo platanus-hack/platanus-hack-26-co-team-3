@@ -10,6 +10,75 @@ diagnóstico y el arreglo propuesto para que lo apliquen en segundos.
 
 ---
 
+## 0. 🔴🔴 EL MÁS GRAVE — CloudFront convierte cada denegación en un `200 OK`
+
+**Impacto en la demo:** Roxy deniega correctamente y lo registra, pero **el
+agente que llamó nunca ve el 403**: recibe `200 OK` con el HTML del dashboard.
+La corrida "con Roxy" no muestra "bloqueado por la regla 1", muestra un error
+de "Roxy no disponible".
+
+### La prueba (reproducible ahora mismo)
+
+```bash
+curl -i -X POST https://roxygt.lat/gateway/v1/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{"mcpName":"mongo-catalog-mcp","accessedBy":"probe","action":"drop_table",
+       "payload":{"intent":"DROP TABLE orders"}}'
+```
+
+```
+HTTP/2 200
+content-type: text/html
+x-cache: Error from cloudfront      ← CloudFront reescribió la respuesta
+<!doctype html> ...
+```
+
+Y sin embargo, del lado del servidor **sí funcionó**:
+
+```bash
+curl -s "https://roxygt.lat/api/log?accessedBy=probe&limit=2"
+# → denied | operation 1 (write/destructive on 'orders') is denied by rule priority 1
+```
+
+### Causa raíz
+
+`infra/main.tf:226-230` mapea, a nivel de toda la distribución:
+
+```hcl
+custom_error_response {
+  error_code    = 403
+  response_code = 200
+  response_page_path = "/index.html"
+}
+```
+
+Está ahí para el routing del SPA. Pero `roxy-gateway` usa **403 para
+denegar** (`README` del gateway: *"evaluator allowed:false → 403 sin body"*),
+así que toda denegación que pase por CloudFront se convierte en 200 + HTML.
+
+### Por qué no es catastrófico (pero sí rompe el relato)
+
+El SDK **falla cerrado**: `roxy-sdk/src/roxy/client.py` levanta
+`RoxyUnavailable` ante un 2xx con cuerpo no-JSON — el autor anticipó
+exactamente este caso. Nada se aprueba por error. Pero el agente reporta
+"Roxy no disponible" en vez de "denegado", que es justo lo que hay que
+mostrar en el escenario 3 de la demo.
+
+### Arreglos posibles (decisión de infra/gateway)
+
+1. **Que el gateway no use 403 para denegar** — devolver `200` con
+   `{"allowed": false, "reason": ...}`, o un status que CloudFront no
+   reescriba (409/422). Requiere tocar también el SDK, que hoy lee 403.
+2. **Quitar el mapeo 403→200** y resolver el routing del SPA solo con el de
+   404. El de 403 suele estar por S3; si el bucket está bien configurado,
+   sobra.
+
+⚠️ **Verificar antes del demo:** `invoices-mcp` (el que usa `agent-flow-demo`
+por defecto) **no produjo ningún log** en esta prueba, mientras
+`mongo-catalog-mcp` sí. Puede que no esté sembrado en el Mongo de producción.
+
+---
+
 ## 1. 🔴 CRÍTICO — `verifier/evaluator.py` no habla el mismo idioma que el gateway
 
 **Impacto si no se arregla:** si alguien apunta `EVALUATOR_URL` al
