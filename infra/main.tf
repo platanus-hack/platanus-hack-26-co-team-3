@@ -75,6 +75,14 @@ resource "aws_cloudfront_function" "strip_gateway_prefix" {
   code    = file("${path.module}/templates/strip_gateway_prefix.js")
 }
 
+resource "aws_cloudfront_function" "strip_demo_api_prefix" {
+  name    = "${var.project_name}-strip-demo-api-prefix"
+  runtime = "cloudfront-js-1.0"
+  comment = "Rewrites /demo-api/* to /* before forwarding to the demo-api origin"
+  publish = true
+  code    = file("${path.module}/templates/strip_demo_api_prefix.js")
+}
+
 resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -120,6 +128,18 @@ resource "aws_cloudfront_distribution" "app" {
 
     custom_origin_config {
       http_port              = 8003
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
+    domain_name = aws_eip.api.public_dns
+    origin_id   = "ec2-demo-api"
+
+    custom_origin_config {
+      http_port              = 8001
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
@@ -179,6 +199,22 @@ resource "aws_cloudfront_distribution" "app" {
     cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
     compress                 = true
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/demo-api/*"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "ec2-demo-api"
+    viewer_protocol_policy   = "redirect-to-https"
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    compress                 = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_demo_api_prefix.arn
+    }
   }
 
   custom_error_response {

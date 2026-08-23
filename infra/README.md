@@ -9,15 +9,15 @@ server to AWS, within the AWS Free Tier for a low-traffic project.
 - **S3 bucket** (named `var.project_name`) — hosts the built frontend (`app/dist`) under the
   `app/` prefix, private, only reachable through CloudFront.
 - **CloudFront distribution** — one HTTPS domain for everything. `/*` → S3 (frontend), `/api/*` →
-  the dashboard API, `/gateway/*` → roxy-gateway, `/mcp*` → mcp-server (all three on the EC2
-  instance). Routing everything through the same domain avoids CORS and avoids the browser blocking
-  mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS certificate. The `/api/*` and
-  `/gateway/*` behaviors each have a CloudFront Function that strips their path prefix before
-  forwarding to the origin (`strip_api_prefix.js`, `strip_gateway_prefix.js`) — so
-  `/gateway/v1/evaluate` reaches roxy-gateway as `/v1/evaluate`. `/mcp*` has no such function:
-  mongodb-mcp-server's HTTP endpoint is a single fixed path, `/mcp` (not a prefix scheme), so the
-  CDN path already matches the origin path 1:1 with no rewrite needed. demo-api isn't routed
-  through CloudFront (see below).
+  the dashboard API, `/gateway/*` → roxy-gateway, `/mcp*` → mcp-server, `/demo-api/*` → demo-api
+  (all four on the EC2 instance). Routing everything through the same domain avoids CORS and avoids
+  the browser blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS
+  certificate. The `/api/*`, `/gateway/*`, and `/demo-api/*` behaviors each have a CloudFront
+  Function that strips their path prefix before forwarding to the origin (`strip_api_prefix.js`,
+  `strip_gateway_prefix.js`, `strip_demo_api_prefix.js`) — so `/gateway/v1/evaluate` reaches
+  roxy-gateway as `/v1/evaluate`, and `/demo-api/invoices` reaches demo-api as `/invoices`. `/mcp*`
+  has no such function: mongodb-mcp-server's HTTP endpoint is a single fixed path, `/mcp` (not a
+  prefix scheme), so the CDN path already matches the origin path 1:1 with no rewrite needed.
 - **CloudFront Origin Access Control (OAC)** — used only on the S3 origin. The bucket policy grants
   `s3:GetObject` on `app/*` to `cloudfront.amazonaws.com`, scoped by an `AWS:SourceArn` condition to
   this specific distribution, so nothing else (not even other CloudFront distributions) can read
@@ -47,10 +47,8 @@ server to AWS, within the AWS Free Tier for a low-traffic project.
     (`/mcp`, through the CDN, for callers outside the instance).
 
   All four ports only accept traffic from CloudFront's IP ranges (the security group, one rule
-  covering 8000-8003). The dashboard API, roxy-gateway, and mcp-server are all wired into the
-  CloudFront distribution (`/api/*`, `/gateway/*`, `/mcp*`); demo-api's port is open the same way
-  but has no CloudFront origin routing to it yet — add one (mirroring any of the other three
-  origins/behaviors) if you want it served through the CDN too.
+  covering 8000-8003), and all four are wired into the CloudFront distribution (`/api/*`,
+  `/gateway/*`, `/mcp*`, `/demo-api/*`).
 
   Four tasks share one `t3a.small` (2GiB RAM total): hard memory limits total 700MB + 300MB + 250MB
   + 200MB = 1450MB, comfortably under the ~1.75-1.85GB actually usable after OS/Docker/ECS-agent

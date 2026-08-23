@@ -67,6 +67,11 @@ output "mcp_server_public_url" {
   value       = "/mcp"
 }
 
+output "demo_api_base_url" {
+  description = "Path demo-api is served under through CloudFront (e.g. https://<site_url>/demo-api/invoices)."
+  value       = "/demo-api"
+}
+
 output "aws_region" {
   value = var.aws_region
 }
