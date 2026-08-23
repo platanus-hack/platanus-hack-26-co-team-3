@@ -1,4 +1,4 @@
-# roxy-sdk
+# roxy
 
 Trazabilidad y control de acceso para flujos de agentes que consumen MCPs.
 
@@ -10,9 +10,9 @@ veredicto de Roxy antes de que se ejecute.
 ## Instalación
 
 ```bash
-pip install roxy-sdk
+pip install roxy
 # o
-uv add roxy-sdk
+uv add roxy
 ```
 
 ## Uso

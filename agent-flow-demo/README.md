@@ -64,7 +64,7 @@ haga falta sin arrastrar corrupción de la corrida anterior.
   tools de arriba).
 - `agent_flow/seed_injection.py` — agrega `notes` a dos facturas del seed de
   Freddy (una nota legítima, una que empuja a saltarse auditoría).
-- La trazabilidad y el control de acceso salen del SDK (`roxy-sdk/`): una
+- La trazabilidad y el control de acceso salen del SDK (`roxy-sdk/`, publicado como `roxy`): una
   instancia de `Roxy` se pasa como callback y registra el árbol en
   `/agents` sola.
 - `scripts/register_invoices_mcp.py` — upsert de `invoices-mcp` en
