@@ -39,6 +39,12 @@ export function LogDrawer({ log, onClose }: LogDrawerProps) {
             <div className="drawer-field-label">Accessed by</div>
             <div className="drawer-field-value mono">{log.accessedBy}</div>
           </div>
+          {log.action && (
+            <div className="drawer-field">
+              <div className="drawer-field-label">Action</div>
+              <div className="drawer-field-value mono">{log.action}</div>
+            </div>
+          )}
           <div className="drawer-field">
             <div className="drawer-field-label">Time</div>
             <div className="drawer-field-value">{formatFullTime(log.time)}</div>
@@ -51,6 +57,15 @@ export function LogDrawer({ log, onClose }: LogDrawerProps) {
             <div className="drawer-field-label">Description</div>
             <div className="drawer-field-value">{log.description}</div>
           </div>
+          {log.violatedRule && (
+            <div className="drawer-field">
+              <div className="drawer-field-label">Violated rule</div>
+              <div className="violated-rule">
+                <span className="violated-rule-priority">Priority {log.violatedRule.priority}</span>
+                <span className="drawer-field-value">{log.violatedRule.instruction}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

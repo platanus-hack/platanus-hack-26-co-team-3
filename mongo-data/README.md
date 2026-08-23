@@ -1,7 +1,7 @@
 # mongo-data
 
 Block 1 (idea.md): Mongo schema and mock data for Roxy — database `roxy`,
-collections `mcps` and `security`.
+collections `mcps`, `security`, and `agents`.
 
 ## Contents
 
@@ -49,7 +49,7 @@ python3 population/populate.py
 
 - Connection string: `mongodb://localhost:27017`
 - Database: `roxy`
-- Collections: `mcps`, `security`
+- Collections: `mcps`, `security`, `agents`
 
 ## Stopping / resetting
 

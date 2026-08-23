@@ -100,6 +100,25 @@
               "bsonType": "string",
               "description": "Who accessed: delegated agent identifier/token subject"
             },
+            "action": {
+              "bsonType": "string",
+              "description": "Action the request attempted, e.g. 'drop_table'"
+            },
+            "violatedRule": {
+              "bsonType": "object",
+              "description": "The rule that caused a denial. Present only when status is 'denied'; absent/null when 'approved'.",
+              "required": ["priority", "instruction"],
+              "properties": {
+                "priority": {
+                  "bsonType": "int",
+                  "description": "Priority of the violated rule, matching mcps.rules[].priority"
+                },
+                "instruction": {
+                  "bsonType": "string",
+                  "description": "Rule instruction that was violated, matching mcps.rules[].instruction"
+                }
+              }
+            },
             "description": {
               "bsonType": "string",
               "description": "Log description: human-readable detail of the attempt/decision"
@@ -110,6 +129,34 @@
       "indexes": [
         { "keys": { "mcpId": 1, "time": -1 }, "options": {} },
         { "keys": { "status": 1, "time": -1 }, "options": {} }
+      ]
+    },
+    "agents": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "title": "agents",
+          "required": ["purpose", "sessionId"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "purpose": {
+              "bsonType": "string",
+              "description": "What this agent's task/purpose is"
+            },
+            "parentId": {
+              "bsonType": ["objectId", "null"],
+              "description": "Reference to the parent agent's _id, if spawned by another agent (null for a root/orchestrator agent)"
+            },
+            "sessionId": {
+              "bsonType": "string",
+              "description": "Groups all agents belonging to the same run/session"
+            }
+          }
+        }
+      },
+      "indexes": [
+        { "keys": { "sessionId": 1 }, "options": {} },
+        { "keys": { "parentId": 1 }, "options": {} }
       ]
     }
   }

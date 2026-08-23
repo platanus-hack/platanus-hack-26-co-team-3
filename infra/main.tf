@@ -125,7 +125,7 @@ resource "aws_cloudfront_distribution" "app" {
 
   ordered_cache_behavior {
     path_pattern             = "/api/*"
-    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods           = ["GET", "HEAD"]
     target_origin_id         = "ec2-api"
     viewer_protocol_policy   = "redirect-to-https"
@@ -468,6 +468,7 @@ resource "aws_ecs_task_definition" "roxy_gateway" {
       { name = "PORT", value = "8002" },
       { name = "MONGO_DB_NAME", value = var.mongo_db },
       { name = "EVALUATOR_URL", value = var.evaluator_url },
+      { name = "DASHBOARD_URL", value = var.dashboard_url },
       { name = "MONGO_URI", value = var.mongo_uri },
     ]
     logConfiguration = {
