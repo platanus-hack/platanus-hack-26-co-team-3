@@ -5,3 +5,7 @@
 .claude/settings.local.json
 
 .DS_Store
+
+# Export generado del canvas de diseño (2.2MB, trae el editor adentro).
+# Se regenera desde los .dc.html de dashboard/design/.
+dashboard/design/roxy-dashboard.html
