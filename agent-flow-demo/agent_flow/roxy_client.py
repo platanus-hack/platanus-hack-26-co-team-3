@@ -48,14 +48,20 @@ def evaluate(
     if resp.status_code == 403:
         return RoxyDecision(allowed=False, reason="denegado por Roxy", mcp_response=None)
 
-    if resp.status_code in (502, 503, 404):
+    if not resp.ok:
         raise RoxyUnavailable(f"roxy status {resp.status_code}: {resp.text[:200]}")
 
-    resp.raise_for_status()
-
+    # Un 2xx no alcanza para asumir permiso: entre el agente y Roxy hay un
+    # CloudFront que ante un gateway caido responde su propia pagina de
+    # error en HTML, y eso llegaba aca como "aprobado". Solo un cuerpo JSON
+    # puede venir de Roxy; cualquier otra cosa es fail-closed.
     try:
         body = resp.json()
     except ValueError:
-        body = resp.text
+        raise RoxyUnavailable(
+            f"roxy status {resp.status_code} con cuerpo no-JSON "
+            f"({resp.headers.get('Content-Type', 'sin content-type')}); "
+            f"probablemente una pagina de error del CDN, no una decision"
+        )
 
     return RoxyDecision(allowed=True, reason="aprobado por Roxy", mcp_response=body)
