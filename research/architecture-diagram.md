@@ -1,173 +1,172 @@
 # Diagrama de arquitectura general
 
-Reconstruido del estado actual del código en `main` (no de `idea.md` a
-secas — varias piezas ya avanzaron más de lo que el checklist refleja).
-Se itera a medida que entre más información al `idea.md`.
+Reconstruido leyendo el código real en `main` y **probando los servicios
+desplegados en vivo** (2026-08-23, 01:00). No es lo que dice `idea.md` ni
+lo que dicen los README — es lo que efectivamente corre.
 
-## Componentes y flujo de datos
+---
 
-```mermaid
-flowchart TB
-    subgraph agents["Bloque 5 — agent-flow-demo (Andrés, hecho)"]
-        orch["Orquestador (LangChain)"]
-        subOk["Sub-agente legítimo"]
-        subBad["Sub-agente con nota maliciosa"]
-        orch --> subOk
-        orch --> subBad
-    end
+## 1. Diagrama para el tablero / deck (el que se muestra hablando)
 
-    subgraph sdk["roxy-sdk (Python) — registra el árbol solo, vía callback de LangChain"]
-        cb["Roxy(BaseCallbackHandler)"]
-    end
-    orch -. "callback enganchado una vez" .-> cb
-    cb -->|"POST /agents (purpose, parentId, sessionId)"| dapi
-
-    subgraph gateway["Bloque 2 — roxy-gateway (Stiven)"]
-        rg["POST /v1/evaluate"]
-    end
-    subOk -->|"mcpName, accessedBy, action, payload\n(header X-Roxy-Agent-Run)"| rg
-    subBad -->|"mcpName, accessedBy, action, payload"| rg
-
-    subgraph evaluator["Evaluator API (contrato HTTP: EVALUATOR_URL)"]
-        stub["stub_evaluator.py (agent-flow-demo)\nen uso HOY por default"]
-        aegis["Bloque 10 — verifier / Aegis Gate (Sebastián)\nreal, determinista + Z3 opcional + Solana\nNO conectado todavía (mismatch de contrato)"]
-    end
-    rg -->|"HOY: {rules, prompt}"| stub
-    rg -. "documentado pero no enchufado:\nAegis Gate espera {mcp, request, time}" .-> aegis
-    stub -->|veredicto| rg
-
-    subgraph mongoRoxy["Mongo db `roxy` — Bloque 1 (Santiago)"]
-        mcps[("mcps: nombre, server.url,\nauthorization, rules")]
-        sec[("security: status, mcp,\ntime, accessedBy, description")]
-        agentsCol[("agents: purpose, parentId,\nsessionId, outcome?")]
-    end
-    rg -->|lee MCP| mcps
-    rg -->|log allow/deny| sec
-
-    subgraph dashboard["Bloque 3 — dashboard (Freddy + Santiago)"]
-        dapi["GET/POST /log, /agents\nGET /sessions, PATCH /agents/id"]
-        front["Frontend React\n(Overview, Logs, Agents)"]
-        dapi --> front
-    end
-    rg -. "POST /log (opcional, DASHBOARD_URL)" .-> dapi
-    sec -->|lee logs| dapi
-    agentsCol -->|lee árbol| dapi
-
-    rg -->|"allowed:true → Sonnet 5 planea endpoint/método/body,\nRoxy ejecuta el HTTP con credenciales del MCP"| target["MCP objetivo\n(mock: mongo-catalog / payments / inventory)"]
-    rg -->|"allowed:false → 403 sin body"| subBad
-
-    subgraph victim["Bloque 4 — demo-api (Freddy, hecho)"]
-        api["FastAPI: /invoices,\n/health/consistency, /admin/reset"]
-    end
-    subgraph mongoBilling["Mongo db `demo_billing`"]
-        inv[("invoices")]
-    end
-    api <--> inv
-    subBad -. "ataque directo a Mongo\n(escenario 'sin Roxy', bypassea el gateway)" .-> inv
-    target -. "en el escenario real de la demo,\neste MCP apunta a demo_billing" .-> inv
-
-    subgraph runner["Bloque 7 — demo/ (Todos, en progreso)"]
-        run["local-stack.sh: levanta Mongo + demo-api\n+ evaluador + roxy-gateway en orden"]
-    end
-    run -.-> agents
-    run -.-> api
-    run -.-> front
-```
-
-## Flujo de una petición (con Roxy)
-
-```mermaid
-sequenceDiagram
-    participant Agente as Sub-agente
-    participant Roxy as roxy-gateway
-    participant Eval as Evaluator API
-    participant Mongo as Mongo (roxy)
-    participant MCP as MCP objetivo
-
-    Agente->>Roxy: POST /v1/evaluate {mcpName, accessedBy, action, payload}\n(header X-Roxy-Agent-Run)
-    Roxy->>Mongo: lee mcps.{mcpName} (rules, server, auth)
-    Roxy->>Eval: POST {rules, prompt} (HOY: stub_evaluator.py)
-    Eval-->>Roxy: {allowed, violatedPriority, reason}
-    Roxy->>Mongo: escribe security (status, mcp, time, accessedBy, description)
-    Roxy-->>Dashboard: POST /log (opcional)
-    alt allowed = true
-        Roxy->>Roxy: Sonnet 5 planea endpoint/método/body (tool http_request)
-        Roxy->>MCP: HTTP con credenciales del MCP
-        MCP-->>Roxy: respuesta cruda
-        Roxy-->>Agente: respuesta cruda del MCP
-    else allowed = false
-        Roxy-->>Agente: 403 (sin body)
-    end
-```
-
-> Nota: el contrato real hoy es `{rules, prompt}` → evaluator, no
-> `{mcp, request, time}`. Aegis Gate (Bloque 10) espera esta segunda
-> forma — no está enchufado detrás de `EVALUATOR_URL` todavía.
-
-## Los 3 escenarios del demo (Bloque 7)
+Este es el que hay que dibujar. Todo lo demás es detalle técnico que no
+va en la slide principal.
 
 ```mermaid
 flowchart LR
-    r1["1. API normal\ndemo-api solo, sin agentes"] --> c1["/health/consistency → 200"]
-    r2["2. Flujo agéntico\nSIN Roxy"] --> c2["ataque directo a Mongo\n/health/consistency → 409"]
-    r3["3. Flujo agéntico\nCON Roxy"] --> c3["Roxy evalúa cada acción\n/health/consistency → 200"]
+    A["Agente<br/>(delegado, no confiable)"]
+    R{"ROXY<br/>Gateway"}
+    V["Verificador<br/>decide"]
+    M[("El dato<br/>facturación")]
+    D["Dashboard<br/>lo ve todo"]
+
+    A -->|"quiere escribir"| R
+    R -->|"¿esta acción viola<br/>alguna regla?"| V
+    V -->|"veredicto"| R
+    R -->|"aprobado"| M
+    R -.->|"denegado ✕"| A
+    R ==>|"queda registrado"| D
+
+    style R fill:#aa3bff,stroke:#aa3bff,color:#fff
+    style V fill:#1c1d24,stroke:#aa3bff,color:#fff
+    style D fill:#1c1d24,stroke:#16a34a,color:#fff
 ```
 
-## Notas de estado (actualizado 2026-08-23 — para no perder contexto al iterar)
+**El mensaje, sin decir una palabra técnica:** hay un punto único, en el
+medio, que ve *todo* antes de que le llegue al dato — y nada pasa por ahí
+sin quedar registrado.
 
-- **Roxy Gateway no evalúa reglas él mismo.** Delega 100% la decisión a un
-  **Evaluator API** externo vía `EVALUATOR_URL`. Pero el contrato que
-  manda hoy (`roxy-gateway/internal/policy/remote.go`) es
-  `{rules: string[], prompt: string}` → `{allowed, violatedPriority,
-  reason}` — **más simple** que el `{mcp, request, time}` que documentamos
-  antes. En local (`demo/local-stack.sh`), `EVALUATOR_URL` apunta a
-  `agent-flow-demo/scripts/stub_evaluator.py` (puerto 9000), un stub de
-  prueba, no a un evaluador real.
-- **Roxy Gateway ya no proxea la petición tal cual** — usa **Claude
-  Sonnet 5 como "planner"**: decide endpoint/método/body y llama al MCP
-  vía un tool `http_request`; Roxy solo ejecuta el HTTP e inyecta
-  credenciales. Ganó también `internal/gateway/oauth.go` (identidad de
-  agente) — no revisado en detalle todavía.
-- **Bloque 10 (`verifier/`) ya NO está vacío — es real y se llama "Aegis
-  Gate".** Motor determinista en Rust (axum, puerto 8080), 0 LLM en el
-  camino de decisión, con Z3 opcional (`--features smt`, prueba una
-  invariante de reserva sobre pagos) y **atestación on-chain real en
-  Solana** (Solana Attestation Service, devnet) de cada veredicto —
-  reproducible byte a byte (mismo input → mismo hash siempre). El LLM solo
-  se usa para *compilar* la regla en lenguaje natural a una política
-  formal congelada — la decisión corre sobre esa política ya fija, nunca
-  sobre texto libre. Ver `verifier/README.md`.
-  - **Pero no está conectado a roxy-gateway todavía.** El `EvalInput` real
-    de Aegis Gate (`verifier/engine/src/model.rs`) es `{mcp: {id, name,
-    description, rules}, request: {accessedBy, action, payload}, time}` —
-    el contrato **viejo**, no el `{rules, prompt}` que roxy-gateway manda
-    hoy. Alguien tiene que decidir cuál de los dos contratos gana y
-    ajustar el lado que sobra antes de poder enchufar Aegis Gate de
-    verdad detrás de `EVALUATOR_URL`.
-- **`roxy-sdk/` (Python, nuevo) reemplazó el registro manual del árbol.**
-  Un callback de LangChain (`Roxy` en `roxy-sdk/src/roxy/callback.py`) se
-  engancha una vez en la invocación y registra cada agente solo (`POST
-  /agents`), sin que el código de `agent-flow-demo` tenga que pasar ids a
-  mano. También propaga la cadena entre procesos (headers
-  `X-Roxy-Session`/`X-Roxy-Parent`) y expone `guard()` para pedirle
-  veredicto a Roxy antes de actuar. Los archivos viejos
-  (`agents_client.py`, `roxy_client.py`, `tracing.py` dentro de
-  `agent-flow-demo/`) se borraron — todo eso vive en el SDK ahora.
-  `langchain-interceptor/` (Bloque 9, Santiago) sigue vacío — parece que
-  el SDK terminó cubriendo lo que iba a ser ese bloque.
-- **Bloque 3 (dashboard) ya tiene el árbol de agentes real**, no mock:
-  `POST/GET /agents` (Santiago) + `GET /sessions` y `PATCH
-  /agents/{id}` (Freddy, hoy) sobre la misma colección `roxy.agents`
-  (`purpose`, `parentId`, `sessionId`, `outcome?`). El frontend tiene una
-  sección "Agents" (lista de sesiones + grafo del árbol) — ver
-  `dashboard/app/src/views/Agents.tsx`.
-- **Bloque 5 (agent-flow-demo) está hecho**, no es mock: usa
-  `roxy-sdk` de verdad, corre contra `demo-api`/Mongo real, y
-  `agent-flow-demo/compare.sh` corre el contraste con/sin Roxy.
-- Los 3 MCPs del mock original (`mongo-catalog-mcp`, `payments-mcp`,
-  `inventory-mcp`) siguen con URLs ficticias — el MCP que sí importa para
-  la demo (`invoices-mcp` → `demo_billing`) ya se registra aparte vía
-  `agent-flow-demo/scripts/register_invoices_mcp.py`.
-- **`demo/local-stack.sh`** (Bloque 7) ya levanta/baja todo el stack local
-  en el orden correcto (`up`/`status`/`down`) — el punto de partida para
-  correr la demo completa a mano.
+---
+
+## 2. Diagrama técnico — Z3 / Solana (la slide de ~8 segundos)
+
+```mermaid
+flowchart TD
+    NL["Regla escrita en español<br/>'no cerrar como pagada sin registro'"]
+    C["El LLM la traduce<br/>UNA sola vez"]
+    P["Política formal<br/>congelada + hasheada"]
+    E["Motor determinista<br/>0 LLM en la decisión"]
+    Z["Z3: prueba matemática<br/>de la invariante"]
+    S["Solana<br/>veredicto anclado on-chain"]
+
+    NL --> C --> P --> E
+    E -.->|"opcional"| Z
+    E --> S
+
+    style P fill:#1c1d24,stroke:#aa3bff,color:#fff
+    style E fill:#aa3bff,stroke:#aa3bff,color:#fff
+    style S fill:#1c1d24,stroke:#16a34a,color:#fff
+```
+
+**La frase:** el LLM traduce la regla una vez; la decisión corre siempre
+determinista sobre esa política ya congelada — mismo input, mismo
+resultado, siempre. Y cada veredicto queda anclado en Solana: nadie,
+ni nosotros, puede reescribir después lo que pasó.
+
+---
+
+## 3. Los 3 escenarios de la demo
+
+```mermaid
+flowchart LR
+    subgraph s1["1 · Estado normal"]
+        a1["demo-api"] --> b1["✓ consistente"]
+    end
+    subgraph s2["2 · Agentes SIN Roxy"]
+        a2["nota maliciosa<br/>en el portal"] --> b2["el agente obedece"] --> c2["✕ dato corrompido"]
+    end
+    subgraph s3["3 · Agentes CON Roxy"]
+        a3["misma nota maliciosa"] --> b3["Roxy evalúa"] --> c3["✓ bloqueado, dato intacto"]
+    end
+
+    style b1 fill:#16a34a,color:#fff
+    style c2 fill:#dc2626,color:#fff
+    style c3 fill:#16a34a,color:#fff
+```
+
+---
+
+## 4. Flujo real completo (referencia técnica, NO para slide)
+
+```mermaid
+flowchart TB
+    subgraph flow["agent-flow-demo · Bloque 5 (Andrés)"]
+        orch["Orquestador LangChain"]
+        sub["Subagentes<br/>uno por factura"]
+        portal["customer_portal.py<br/>portal de proveedores falso<br/>← entra la nota maliciosa"]
+        orch --> sub
+        portal -.->|"read_customer_notes"| sub
+    end
+
+    subgraph sdkbox["roxy-sdk (Python)"]
+        cb["Roxy(BaseCallbackHandler)<br/>registra el árbol solo"]
+        guard["guard() — somete la escritura"]
+    end
+    orch -.->|"callback"| cb
+    sub --> guard
+
+    subgraph gw["roxy-gateway · Bloque 2 (Stiven) — Go"]
+        ev["POST /v1/evaluate"]
+        planner["Claude Sonnet 5<br/>planea la llamada al MCP"]
+    end
+    guard -->|"mcpName, accessedBy,<br/>action, payload"| ev
+
+    subgraph verif["Verificador · Bloque 10"]
+        rust["engine/ (Rust, Sebastián)<br/>habla {rules, prompt} ✓"]
+        py["evaluator.py (Python, Andrés)<br/>habla {mcp, request, time} ✗"]
+    end
+    ev -->|"{rules, prompt}"| rust
+    ev -.->|"INCOMPATIBLE hoy"| py
+
+    subgraph mongo["Mongo roxy · Bloque 1"]
+        mcps[("mcps<br/>reglas en lenguaje natural")]
+        sec[("security<br/>cada decisión")]
+        ag[("agents<br/>árbol de delegación")]
+    end
+    ev --> mcps
+    ev -->|"escribe directo"| sec
+    cb -->|"POST /agents"| ag
+
+    subgraph dash["dashboard · Bloque 3 (Freddy)"]
+        dapi["/log · /agents · /sessions"]
+        ui["Overview · Logs · Agents"]
+        dapi --> ui
+    end
+    ev -.->|"POST /log — ⚠ segunda escritura"| dapi
+    sec --> dapi
+    ag --> dapi
+
+    subgraph victim["demo-api · Bloque 4 (Freddy)"]
+        api["/invoices · /health/consistency<br/>/admin/reset"]
+    end
+    planner -->|"aprobado → HTTP real"| api
+    ev --> planner
+    sub -->|"lee facturas (solo lectura)"| api
+
+    style rust fill:#16a34a,color:#fff
+    style py fill:#dc2626,color:#fff
+```
+
+---
+
+## Estado verificado en vivo (2026-08-23, 01:00)
+
+Probado con `curl` contra el despliegue real, no asumido:
+
+| servicio | endpoint | estado |
+|---|---|---|
+| roxy-gateway | `https://roxygt.lat/gateway/health` | ✅ `{"service":"roxy","status":"ok"}` |
+| dashboard API | `https://roxygt.lat/api/log` | ✅ devuelve logs reales |
+| demo-api | `https://roxygt.lat/demo-api/health/consistency` | ✅ `consistent: true, checked: 30` |
+| MCP server | `https://roxygt.lat/mcp` | ✅ responde (pide sesión) |
+
+**La corrida con Roxy ya funcionó de verdad en prod**: hay denegaciones
+reales en `security` de las 06:06 UTC de hoy, sobre
+`agent-subtask-INV-1005` y `agent-subtask-INV-1011`, con el motivo
+`"operation 1 (write on 'invoices') is denied by rule priority 1"`.
+
+## ⚠ Dos problemas encontrados (ver `research/ISSUES.md`)
+
+1. **Contrato del evaluador incompatible** entre `roxy-gateway` y
+   `verifier/evaluator.py` — confirmado con una prueba real (422).
+2. **Cada decisión se escribe dos veces** en `security` → el dashboard
+   muestra todo duplicado.
