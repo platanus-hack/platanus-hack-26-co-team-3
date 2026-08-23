@@ -26,19 +26,17 @@ type Service struct {
 	logs      LogWriter
 	evaluator policy.Evaluator
 	notifier  dashboard.Notifier
-	planner   MCPPlanner
-	mcp       MCPCaller
+	agent     MCPAgent
 	now       func() time.Time
 }
 
-func New(mcps MCPFinder, logs LogWriter, evaluator policy.Evaluator, notifier dashboard.Notifier, planner MCPPlanner, caller MCPCaller) *Service {
+func New(mcps MCPFinder, logs LogWriter, evaluator policy.Evaluator, notifier dashboard.Notifier, agent MCPAgent) *Service {
 	return &Service{
 		mcps:      mcps,
 		logs:      logs,
 		evaluator: evaluator,
 		notifier:  notifier,
-		planner:   planner,
-		mcp:       caller,
+		agent:     agent,
 		now:       func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -131,11 +129,7 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateRe
 		return resp, nil
 	}
 
-	plan, err := s.planner.Plan(ctx, doc, req.Action, req.Payload)
-	if err != nil {
-		return EvaluateResponse{}, err
-	}
-	up, err := s.mcp.Invoke(ctx, doc, plan)
+	up, err := s.agent.CallMCP(ctx, doc, req.Action, req.Payload)
 	if err != nil {
 		return EvaluateResponse{}, err
 	}

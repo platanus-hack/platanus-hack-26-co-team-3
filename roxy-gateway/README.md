@@ -7,9 +7,9 @@ API **roxy**: capa de seguridad entre agentes y MCPs. V1 no evalúa rules: llama
 `POST /v1/evaluate` → carga el MCP por `mcpName` → POST al evaluator (`EVALUATOR_URL`) con mcp + request + time, **sin credenciales** → log + dashboard →
 
 - evaluator `allowed: false` → **403** sin body (no llama al MCP)
-- evaluator `allowed: true` → **Sonnet 5** arma method/url/body del MCP (no hardcodeado) → Roxy ejecuta ese HTTP, inyecta credenciales de Mongo, y **devuelve la respuesta cruda del MCP**
+- evaluator `allowed: true` → **Sonnet 5** decide endpoint/método/body y llama al MCP vía tool `http_request` (Roxy solo ejecuta el HTTP e inyecta credenciales). Devuelve la **respuesta cruda del MCP**
 - evaluator caído → **503**
-- planner (Sonnet) caído → **503** `planner unavailable`
+- el modelo no llega a llamar al MCP → **503** `planner unavailable`
 - MCP caído → **502**
 - MCP no existe → **404**
 
@@ -114,7 +114,7 @@ El evaluator responde `allowed`, `violatedPriority`, `reason` (lo que usa Roxy).
 - Go 1.22+
 - Mongo en `mongodb://localhost:27017`, database `roxy` (el bloque `mongo-data` lo levanta con `./run.sh`)
 - `EVALUATOR_URL` (API de veredicto)
-- `ANTHROPIC_API_KEY` (planner Sonnet: arma el HTTP del MCP)
+- `ANTHROPIC_API_KEY` (Sonnet llama al MCP con tool HTTP)
 
 ## Config
 
@@ -131,7 +131,7 @@ set -a && source .env && set +a
 | `MONGO_URI` | required | |
 | `MONGO_DB_NAME` | `roxy` | |
 | `EVALUATOR_URL` | required | `POST` JSON del contrato evaluator |
-| `ANTHROPIC_API_KEY` | required | planner: forma el HTTP del MCP |
+| `ANTHROPIC_API_KEY` | required | Sonnet llama al MCP (tool HTTP) |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | |
 | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | |
 | `DASHBOARD_URL` | vacío = no-op | POST JSON en allow y deny |

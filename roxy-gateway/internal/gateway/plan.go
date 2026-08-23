@@ -2,14 +2,12 @@ package gateway
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"roxy-gateway/internal/mcp"
 	"roxy-gateway/internal/policy"
 )
 
@@ -17,10 +15,6 @@ type PlannedCall struct {
 	Method string
 	URL    string
 	Body   json.RawMessage
-}
-
-type MCPPlanner interface {
-	Plan(ctx context.Context, doc *mcp.MCP, action string, payload []byte) (PlannedCall, error)
 }
 
 func normalizePlan(baseURL string, raw []byte) (PlannedCall, error) {
