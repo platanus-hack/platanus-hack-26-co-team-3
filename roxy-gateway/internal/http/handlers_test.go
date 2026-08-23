@@ -32,53 +32,53 @@ func TestEvaluateHandler(t *testing.T) {
 		"action":     "drop_table",
 		"payload":    map[string]any{"intent": "DROP TABLE orders"},
 	}
-	rule := mcp.Rule{Priority: 1, Instruction: "deny any write operation outside working hours"}
 
 	tests := []struct {
-		name        string
-		body        any
-		svc         stubService
-		wantStatus  int
-		wantSubstr  string
-		wantMissing string
+		name       string
+		body       any
+		svc        stubService
+		wantStatus int
+		wantBody   string
 	}{
 		{
 			name:       "400 missing action",
 			body:       map[string]any{"mcpName": "mongo-catalog-mcp", "accessedBy": "agent-1"},
 			wantStatus: http.StatusBadRequest,
-			wantSubstr: `"error":"invalid request"`,
+			wantBody:   `"error":"invalid request"`,
 		},
 		{
 			name:       "404 unknown mcp",
 			body:       validBody,
 			svc:        stubService{err: mcp.ErrNotFound},
 			wantStatus: http.StatusNotFound,
-			wantSubstr: `"error":"mcp not found"`,
+			wantBody:   `"error":"mcp not found"`,
 		},
 		{
 			name:       "503 evaluator",
 			body:       validBody,
 			svc:        stubService{err: policy.ErrUnavailable},
 			wantStatus: http.StatusServiceUnavailable,
-			wantSubstr: `"error":"evaluator unavailable"`,
+			wantBody:   `"error":"evaluator unavailable"`,
 		},
 		{
-			name: "200 denied",
+			name:       "503 planner",
+			body:       validBody,
+			svc:        stubService{err: policy.ErrPlan},
+			wantStatus: http.StatusServiceUnavailable,
+			wantBody:   `"error":"planner unavailable"`,
+		},
+		{
+			name: "403 denied has empty body",
 			body: validBody,
 			svc: stubService{resp: gateway.EvaluateResponse{
-				Decision:     "denied",
-				MCPName:      "mongo-catalog-mcp",
-				AccessedBy:   "agent-subtask-07",
-				ViolatedRule: &rule,
-				Reason:       "drop table violates write rule",
-				LogID:        "abc",
+				Decision: "denied",
+				Allowed:  false,
 			}},
-			wantStatus:  http.StatusOK,
-			wantSubstr:  `"decision":"denied"`,
-			wantMissing: `"credentials"`,
+			wantStatus: http.StatusForbidden,
+			wantBody:   "",
 		},
 		{
-			name: "200 approved",
+			name: "200 allowed returns raw mcp body",
 			body: map[string]any{
 				"mcpName":    "inventory-mcp",
 				"accessedBy": "agent-orchestrator-01",
@@ -86,22 +86,16 @@ func TestEvaluateHandler(t *testing.T) {
 				"payload":    map[string]any{"intent": "read stock"},
 			},
 			svc: stubService{resp: gateway.EvaluateResponse{
-				Decision:   "approved",
-				MCPName:    "inventory-mcp",
-				AccessedBy: "agent-orchestrator-01",
-				Reason:     "stock read allowed",
-				LogID:      "def",
-				Connection: &gateway.Connection{
-					URL:      "https://mcp.internal/inventory",
-					Protocol: "sse",
-					Authorization: mcp.Authorization{
-						Type:        "apiKey",
-						Credentials: "inv_key_demo",
-					},
+				Decision: "approved",
+				Allowed:  true,
+				Upstream: &gateway.Upstream{
+					StatusCode:  http.StatusOK,
+					ContentType: "application/json",
+					Body:        []byte(`{"stock":42}`),
 				},
 			}},
 			wantStatus: http.StatusOK,
-			wantSubstr: `"credentials":"inv_key_demo"`,
+			wantBody:   `{"stock":42}`,
 		},
 	}
 
@@ -116,10 +110,11 @@ func TestEvaluateHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			require.Equal(t, tt.wantStatus, w.Code)
-			require.Contains(t, w.Body.String(), tt.wantSubstr)
-			if tt.wantMissing != "" {
-				require.NotContains(t, w.Body.String(), tt.wantMissing)
+			if tt.wantBody == "" {
+				require.Empty(t, w.Body.String())
+				return
 			}
+			require.Contains(t, w.Body.String(), tt.wantBody)
 		})
 	}
 }

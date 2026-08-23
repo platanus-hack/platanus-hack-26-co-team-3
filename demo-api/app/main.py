@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -7,10 +8,18 @@ from app.consistency import check_all
 from app.db import get_invoices_collection
 from app.seed import reset_db, seed_if_empty
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    seed_if_empty()
+    try:
+        seed_if_empty()
+    except Exception:
+        # Startup seeding is a convenience, not a hard requirement: if Mongo is
+        # briefly unreachable at boot, the app should still come up (routes will
+        # surface the real error per-request) instead of refusing to start at all.
+        logger.exception("startup seeding failed; continuing so the API can still serve requests")
     yield
 
 

@@ -27,6 +27,9 @@ Por ejemplo,
     
     Veredicto: all(1., 2.) = NO
 
+## Dashboard
+The Roxy dashboard provides an interactive panel for users to see (for now one user) to see the logs of the requests that have arrived to Roxy, and tell what the outcome has been an a description. There are positive green logs which are telling when Roxy allowed entry, and there are negative red logs which are telling when Roxy denied entry with the reason of denial. Indepentent of the status of the log, it should show the detail of what happened in that request -- requested, status, description, time, etc --.
+
 
 ## Bloques
 1. [x] Datos de Mongo (schema y mock) - **Santiago**
@@ -58,12 +61,12 @@ Por ejemplo,
         - [ ] General log negativo actionable
     - [ ] Respuesta a agente
 
-3. [ ] Dashboard (full stack web) - **Santiago**
-    - [ ] API de dashboard que lee logs
-    - [ ] Frontend que muestra logs pero principalmente alertas
+3. [x] Dashboard (full stack web) - **Santiago**
+    - [x] API de dashboard que lee logs
+    - [x] Frontend que muestra logs pero principalmente alertas
 
-4. [ ] API funcional de demo con datos en Mongodb - **Freddy**
-    - [ ] Defecto de posible falla en inconsistencia de datos
+4. [x] API funcional de demo con datos en Mongodb - **Freddy**
+    - [x] Defecto de posible falla en inconsistencia de datos
 
 5. [ ] Langchain/Other flujo de agentes para demo - **Andres**
     - [ ] 2 agentes, 1 orquestador que recibe tarea y que lance múltiples sub-agentes y que algunos de esos agentes hagan operaciones que no deben y otros operaciones que si, para que se muestre como quedan operaciones indebidas las cuales el agente no sepa cuales son.
@@ -72,12 +75,12 @@ Por ejemplo,
         - [ ] Conecta con MCP de Mongo
         - [ ] Con/Sin Roxy
 
-6. [ ] Investigación - **Freddy**
-    - [ ] Segun criterios de evaluacion
-    - [ ] A2A en la industria
-    - [ ] Accidentes Reales de A2A
-    - [ ] Otras soluciones existentes
-    - [ ] Impacto de solucion en el mercado (impacto de soliconar este problema)
+6. [x] Investigación - **Freddy**
+    - [x] Segun criterios de evaluacion
+    - [x] A2A en la industria
+    - [x] Accidentes Reales de A2A
+    - [x] Otras soluciones existentes
+    - [x] Impacto de solucion en el mercado (impacto de soliconar este problema)
     - [ ] Le cuenta al equipo
 
 
@@ -93,5 +96,9 @@ Por ejemplo,
 
 9. [ ] Langchain interceptor class that creates trace of nodes (agents) and register directly into database with their context, their purpose - **Santiago**
     - [ ] Callback para eventos de langchain (on_chain_start, on_tool_start, on_llm_start)
+
+10. [ ] Capa de verificación - **Sebastian**
+    - [ ] Traducir lenguaje natural (componentes de contexto y reglas) a lenguaje para Z3
+    - [ ] Verificar con Z3 la lógica de que el contexto se encuentre correspondiente a las reglas
 
 

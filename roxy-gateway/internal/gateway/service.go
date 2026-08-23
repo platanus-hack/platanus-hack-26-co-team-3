@@ -26,15 +26,17 @@ type Service struct {
 	logs      LogWriter
 	evaluator policy.Evaluator
 	notifier  dashboard.Notifier
+	agent     MCPAgent
 	now       func() time.Time
 }
 
-func New(mcps MCPFinder, logs LogWriter, evaluator policy.Evaluator, notifier dashboard.Notifier) *Service {
+func New(mcps MCPFinder, logs LogWriter, evaluator policy.Evaluator, notifier dashboard.Notifier, agent MCPAgent) *Service {
 	return &Service{
 		mcps:      mcps,
 		logs:      logs,
 		evaluator: evaluator,
 		notifier:  notifier,
+		agent:     agent,
 		now:       func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -46,12 +48,6 @@ type EvaluateRequest struct {
 	Payload    []byte
 }
 
-type Connection struct {
-	URL           string            `json:"url"`
-	Protocol      string            `json:"protocol,omitempty"`
-	Authorization mcp.Authorization `json:"authorization"`
-}
-
 type EvaluateResponse struct {
 	Decision     string
 	MCPName      string
@@ -59,7 +55,8 @@ type EvaluateResponse struct {
 	ViolatedRule *mcp.Rule
 	Reason       string
 	LogID        string
-	Connection   *Connection
+	Allowed      bool
+	Upstream     *Upstream
 }
 
 func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateResponse, error) {
@@ -126,17 +123,16 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluateRequest) (EvaluateRe
 		ViolatedRule: result.ViolatedRule,
 		Reason:       description,
 		LogID:        logID,
+		Allowed:      result.Allowed,
 	}
-	if result.Allowed {
-		resp.Connection = connectionFrom(doc)
+	if !result.Allowed {
+		return resp, nil
 	}
-	return resp, nil
-}
 
-func connectionFrom(doc *mcp.MCP) *Connection {
-	return &Connection{
-		URL:           doc.Server.URL,
-		Protocol:      doc.Server.Protocol,
-		Authorization: doc.Authorization,
+	up, err := s.agent.CallMCP(ctx, doc, req.Action, req.Payload)
+	if err != nil {
+		return EvaluateResponse{}, err
 	}
+	resp.Upstream = &up
+	return resp, nil
 }

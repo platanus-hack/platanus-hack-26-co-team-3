@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    :root {
+      --bg: #fff;
+      --panel: #fafafa;
+      --text: #6b6375;
+      --text-h: #08060d;
+      --text-muted: #948e9c;
+      --border: #e5e4e7;
+      --accent: #aa3bff;
+      --accent-bg: rgba(170, 59, 255, 0.1);
+      --green: #16a34a;
+      --green-bg: rgba(22, 163, 74, 0.1);
+      --green-border: rgba(22, 163, 74, 0.3);
+      --red: #dc2626;
+      --red-bg: rgba(220, 38, 38, 0.07);
+      --red-border: rgba(220, 38, 38, 0.32);
+      --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+      --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+      --mono: ui-monospace, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16171d;
+        --panel: #1c1d24;
+        --text: #9ca3af;
+        --text-h: #f3f4f6;
+        --text-muted: #6b7280;
+        --border: #2e303a;
+        --accent: #c084fc;
+        --accent-bg: rgba(192, 132, 252, 0.15);
+        --green: #4ade80;
+        --green-bg: rgba(74, 222, 128, 0.1);
+        --green-border: rgba(74, 222, 128, 0.28);
+        --red: #f87171;
+        --red-bg: rgba(248, 113, 113, 0.1);
+        --red-border: rgba(248, 113, 113, 0.28);
+        --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--sans); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent); text-decoration: underline; }
+    .nav-item { transition: background 0.15s, color 0.15s; cursor: pointer; }
+    .nav-item:hover { background: var(--panel); color: var(--text-h); }
+    .alert-card { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+    .alert-card:hover { box-shadow: var(--shadow); border-color: var(--red); }
+    .activity-row { cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-row:hover { background: var(--panel); }
+    .close-btn { cursor: pointer; transition: background 0.15s; }
+    .close-btn:hover { background: var(--panel); }
+    .live-dot { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+  </style>
+</helmet>
+
+<div style="display: flex; width: 100%; height: 100vh; background: var(--bg); overflow: hidden;">
+
+  <nav style="width: 232px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 22px 14px;">
+    <div style="display: flex; align-items: center; gap: 9px; padding: 4px 10px 26px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2.5L4 5.5V11C4 16.2 7.4 20.9 12 22C16.6 20.9 20 16.2 20 11V5.5L12 2.5Z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M8.5 12L11 14.5L16 9" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-size: 16px; font-weight: 600; color: var(--text-h); letter-spacing: -0.2px;">Roxy</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div class="nav-item" style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; background: var(--accent-bg); color: var(--accent);">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+          <rect x="2.5" y="2.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="11" y="2.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="2.5" y="11" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="11" y="11" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+        Overview
+      </div>
+      <div class="nav-item" style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text);">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+          <rect x="2.5" y="4" width="15" height="3" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="2.5" y="8.5" width="15" height="3" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="2.5" y="13" width="15" height="3" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        Logs
+      </div>
+    </div>
+
+    <div style="flex-grow: 1;"></div>
+
+    <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border);">
+      <span class="live-dot" style="width: 7px; height: 7px; border-radius: 999px; background: var(--green); display: inline-block; flex-shrink: 0;"></span>
+      <span style="font-size: 12px; color: var(--text-muted);">Monitoring live</span>
+    </div>
+  </nav>
+
+  <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 30px 40px 48px;">
+    <div style="max-width: 920px; display: flex; flex-direction: column; gap: 30px;">
+
+      <div>
+        <h1 style="margin: 0; font-size: 25px; font-weight: 600; color: var(--text-h); letter-spacing: -0.3px;">Overview</h1>
+        <p style="margin: 6px 0 0; font-size: 14px; color: var(--text-muted);">Real-time visibility into Roxy's access decisions.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;">
+        <div style="border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Total requests</div>
+          <div style="font-size: 30px; font-weight: 600; color: var(--text-h); letter-spacing: -0.5px;">{{total}}</div>
+        </div>
+        <div style="border: 1px solid var(--green-border); border-radius: 12px; padding: 18px 20px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="7.5" stroke="var(--green)" stroke-width="1.6"/>
+              <path d="M6.5 10L9 12.5L13.5 7.5" stroke="var(--green)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-size: 13px; color: var(--text-muted);">Approved</span>
+          </div>
+          <div style="font-size: 30px; font-weight: 600; color: var(--green); letter-spacing: -0.5px;">{{approvedCount}}</div>
+        </div>
+        <div style="border: 1px solid var(--red-border); border-radius: 12px; padding: 18px 20px; background: var(--red-bg);">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2.5L18 16.5H2L10 2.5Z" stroke="var(--red)" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M10 8V11.3" stroke="var(--red)" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="10" cy="13.6" r="0.9" fill="var(--red)"/>
+            </svg>
+            <span style="font-size: 13px; color: var(--text-muted);">Denied</span>
+          </div>
+          <div style="font-size: 30px; font-weight: 600; color: var(--red); letter-spacing: -0.5px;">{{deniedCount}}</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-h);">Active alerts</h2>
+          <span style="font-size: 11px; font-weight: 600; color: var(--red); background: var(--red-bg); padding: 2px 8px; border-radius: 999px;">{{deniedCount}}</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <sc-for list="{{alerts}}" as="item" hint-placeholder-count="3">
+            <div class="alert-card" onClick="{{item.onClick}}" style="display: flex; gap: 13px; align-items: flex-start; padding: 15px 17px; border: 1px solid var(--red-border); border-left: 3px solid var(--red); border-radius: 10px; background: var(--red-bg);">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style="flex-shrink: 0; margin-top: 2px;">
+                <path d="M10 2.5L18 16.5H2L10 2.5Z" stroke="var(--red)" stroke-width="1.6" stroke-linejoin="round"/>
+                <path d="M10 8V11.3" stroke="var(--red)" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="10" cy="13.6" r="0.9" fill="var(--red)"/>
+              </svg>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span style="font-size: 14px; font-weight: 600; color: var(--text-h);">{{item.mcpName}}</span>
+                  <span style="font-size: 10.5px; font-weight: 600; color: var(--red); letter-spacing: 0.4px; text-transform: uppercase;">Denied</span>
+                </div>
+                <div style="font-size: 13.5px; color: var(--text); margin-top: 4px; line-height: 1.4;">{{item.description}}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; font-family: var(--mono);">{{item.accessedBy}} &middot; {{item.time}}</div>
+              </div>
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style="flex-shrink: 0; margin-top: 4px;">
+                <path d="M7.5 4.5L13 10L7.5 15.5" stroke="var(--text-muted)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text-h);">Recent activity</h2>
+        <div style="border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+          <sc-for list="{{activity}}" as="item" hint-placeholder-count="4">
+            <div class="activity-row" onClick="{{item.onClick}}" style="display: flex; align-items: center; gap: 12px; padding: 10px 16px;">
+              <span style="width: 7px; height: 7px; border-radius: 999px; background: {{item.color}}; flex-shrink: 0;"></span>
+              <span style="font-size: 13.5px; font-weight: 500; color: var(--text-h); width: 148px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.mcpName}}</span>
+              <span style="font-size: 13px; color: var(--text-muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.description}}</span>
+              <span style="font-size: 12px; color: var(--text-muted); flex-shrink: 0; font-family: var(--mono);">{{item.time}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <sc-if value="{{hasSelected}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeDrawer}}" style="position: fixed; inset: 0; background: rgba(8, 6, 13, 0.35); display: flex; justify-content: flex-end; z-index: 50;">
+      <div onClick="{{stopClick}}" style="width: 420px; max-width: 90%; height: 100%; background: var(--bg); border-left: 1px solid var(--border); box-shadow: var(--shadow); padding: 26px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 10px; border-radius: 999px; color: {{selected.color}}; background: {{selected.bg}}; border: 1px solid {{selected.border}};">{{selected.statusLabel}}</span>
+          <button class="close-btn" onClick="{{closeDrawer}}" aria-label="Close" style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; padding: 0;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3L13 13M13 3L3 13" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div style="font-size: 19px; font-weight: 600; color: var(--text-h);">{{selected.mcpName}}</div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 4px; border-top: 1px solid var(--border);">
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px;">Accessed by</div>
+            <div style="font-size: 14px; color: var(--text-h); font-family: var(--mono);">{{selected.accessedBy}}</div>
+          </div>
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px;">Time</div>
+            <div style="font-size: 14px; color: var(--text-h);">{{selected.fullTime}}</div>
+          </div>
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px;">MCP ID</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); font-family: var(--mono);">{{selected.mcpId}}</div>
+          </div>
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px;">Description</div>
+            <div style="font-size: 14px; color: var(--text-h); line-height: 1.5;">{{selected.description}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  logs = [
+    { id: '1', status: 'denied', mcpName: 'payments-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d1', accessedBy: 'agent-subtask-07', time: '11:20 AM', fullTime: 'Aug 22, 2026 · 11:20:03 AM', description: "Refund attempted without intent confirmation — rule priority 2 violation" },
+    { id: '2', status: 'approved', mcpName: 'mongo-catalog-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d3', accessedBy: 'agent-orchestrator-01', time: '11:05 AM', fullTime: 'Aug 22, 2026 · 11:05:12 AM', description: "Read-only query on 'orders' approved per rule priority 2" },
+    { id: '3', status: 'denied', mcpName: 'inventory-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d2', accessedBy: 'agent-subtask-12', time: '10:52 AM', fullTime: 'Aug 22, 2026 · 10:52:47 AM', description: "Bulk stock adjustment of 5000 units denied — rule priority 2 violation" },
+    { id: '4', status: 'approved', mcpName: 'inventory-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d2', accessedBy: 'agent-orchestrator-01', time: '10:40 AM', fullTime: 'Aug 22, 2026 · 10:40:11 AM', description: "Stock read approved per rule priority 1" },
+    { id: '5', status: 'denied', mcpName: 'payments-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d1', accessedBy: 'agent-subtask-03', time: '10:12 AM', fullTime: 'Aug 22, 2026 · 10:12:33 AM', description: "Attempted write to 'transactions' denied — rule priority 1 violation" },
+    { id: '6', status: 'approved', mcpName: 'mongo-catalog-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d3', accessedBy: 'agent-orchestrator-02', time: '09:58 AM', fullTime: 'Aug 22, 2026 · 09:58:20 AM', description: "Aggregation query on 'sessions' approved per rule priority 3" },
+    { id: '7', status: 'denied', mcpName: 'inventory-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d2', accessedBy: 'agent-subtask-19', time: '09:31 AM', fullTime: 'Aug 22, 2026 · 09:31:05 AM', description: "Attempted delete on 'warehouse' collection denied — rule priority 1 violation" },
+    { id: '8', status: 'approved', mcpName: 'payments-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d1', accessedBy: 'agent-orchestrator-01', time: '09:15 AM', fullTime: 'Aug 22, 2026 · 09:15:00 AM', description: "Balance check approved per rule priority 2" },
+    { id: '9', status: 'approved', mcpName: 'inventory-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d2', accessedBy: 'agent-subtask-05', time: '08:47 AM', fullTime: 'Aug 22, 2026 · 08:47:41 AM', description: "Stock read approved per rule priority 1" },
+    { id: '10', status: 'denied', mcpName: 'mongo-catalog-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d3', accessedBy: 'agent-subtask-14', time: '08:22 AM', fullTime: 'Aug 22, 2026 · 08:22:09 AM', description: "Schema-altering command denied — rule priority 1 violation" },
+    { id: '11', status: 'approved', mcpName: 'payments-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d1', accessedBy: 'agent-orchestrator-02', time: '08:05 AM', fullTime: 'Aug 22, 2026 · 08:05:52 AM', description: "Refund status query approved per rule priority 3" },
+    { id: '12', status: 'denied', mcpName: 'inventory-mcp', mcpId: '66f1a2b3c4d5e6f7a8b9c0d2', accessedBy: 'agent-subtask-12', time: '07:48 AM', fullTime: 'Aug 22, 2026 · 07:48:16 AM', description: "Bulk price override denied — rule priority 2 violation" },
+  ];
+
+  decorate(log) {
+    const isDenied = log.status === 'denied';
+    return Object.assign({}, log, {
+      statusLabel: isDenied ? 'Denied' : 'Approved',
+      color: isDenied ? 'var(--red)' : 'var(--green)',
+      bg: isDenied ? 'var(--red-bg)' : 'var(--green-bg)',
+      border: isDenied ? 'var(--red-border)' : 'var(--green-border)',
+      onClick: this.selectLog(log.id),
+    });
+  }
+
+  selectLog(id) {
+    return () => this.setState({ selectedId: id });
+  }
+
+  closeDrawer = () => this.setState({ selectedId: null });
+  stopClick(e) { e.stopPropagation(); }
+
+  renderVals() {
+    const decorated = this.logs.map((l) => this.decorate(l));
+    const denied = decorated.filter((l) => l.status === 'denied');
+    const selectedId = this.state.selectedId ?? null;
+    const selected = decorated.find((l) => l.id === selectedId) || null;
+
+    return {
+      total: decorated.length,
+      approvedCount: decorated.length - denied.length,
+      deniedCount: denied.length,
+      alerts: denied.slice(0, 5),
+      activity: decorated.slice(0, 6),
+      selected: selected || {},
+      hasSelected: !!selected,
+      closeDrawer: this.closeDrawer,
+      stopClick: this.stopClick,
+    };
+  }
+}
+</script>
+</body>
+</html>

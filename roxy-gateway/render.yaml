@@ -9,6 +9,8 @@ services:
         sync: false
       - key: MONGO_DB_NAME
         value: roxy
+      - key: EVALUATOR_URL
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_MODEL
