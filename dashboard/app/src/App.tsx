@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SecurityLog } from './types'
 import { fetchSecurityLogs } from './lib/api'
+import { dedupeLogs } from './lib/dedupeLogs'
 import { Sidebar, type View } from './components/Sidebar'
 import { LogDrawer } from './components/LogDrawer'
 import { Overview } from './views/Overview'
@@ -14,12 +15,26 @@ function App() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
 
   useEffect(() => {
-    fetchSecurityLogs()
-      .then((data) => {
-        setLogs(data)
+    function load() {
+      return fetchSecurityLogs().then((data) => {
+        // The gateway records each decision twice today (see
+        // research/ISSUES.md); collapse them so one decision reads as one row.
+        setLogs(dedupeLogs(data))
         setStatus('ready')
       })
-      .catch(() => setStatus('error'))
+    }
+
+    load().catch(() => setStatus('error'))
+
+    // Decisions land while the demo is running -- keep the table live instead
+    // of showing whatever was true when the tab was opened.
+    const id = setInterval(() => {
+      if (document.hidden) return
+      load().catch(() => {
+        /* transient: keep the last good list on screen */
+      })
+    }, 4000)
+    return () => clearInterval(id)
   }, [])
 
   return (
@@ -30,7 +45,7 @@ function App() {
       {status === 'error' && <div className="state-message">Couldn't reach the dashboard API.</div>}
       {status === 'ready' && view === 'overview' && <Overview logs={logs} onSelect={setSelected} />}
       {status === 'ready' && view === 'logs' && <Logs logs={logs} onSelect={setSelected} />}
-      {view === 'agents' && <Agents />}
+      {view === 'agents' && <Agents logs={logs} />}
 
       <LogDrawer log={selected} onClose={() => setSelected(null)} />
     </div>
