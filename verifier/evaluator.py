@@ -1,5 +1,15 @@
-"""Capa de verificacion (bloque 10): dado el contexto de una peticion y las
-reglas del MCP, decide si la peticion cae bajo lo que alguna regla prohibe.
+"""Fallback local del bloque 10. NO es la implementacion del bloque.
+
+El motor real es `engine/` (Rust): compila las reglas a una politica formal,
+decide de forma determinista sobre ella y la audita con Z3. Ese es el que
+corre en produccion. Este archivo existe solo para tener a quien preguntarle
+en local cuando no hay toolchain de Rust a mano, y cubre unicamente el
+escenario de facturas de la demo.
+
+OJO: este fallback NO habla el contrato actual del gateway. El gateway manda
+{rules, prompt} (roxy-gateway/internal/policy/remote.go) y esto espera
+{mcp, request, time}, asi que responde 422 y el gateway lo traduce a 503.
+Ver research/ISSUES.md.
 
 Contrato con el gateway (roxy-gateway/internal/policy/remote.go):
 

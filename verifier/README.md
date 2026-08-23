@@ -1,50 +1,78 @@
-# verifier
+# verifier — Bloque 10
 
-Bloque 10 (idea.md): la capa de verificación que Roxy consulta antes de dejar
-pasar una petición. Responde, para cada regla del MCP, la pregunta del
-diseño: *este contexto de petición, ¿se encuentra bajo lo que rige esta
-regla?*
+La capa de verificación que Roxy consulta antes de dejar pasar una petición.
 
-## Contrato
+Hay **dos implementaciones** en esta carpeta y conviene no confundirlas:
 
-Lo fija el gateway (`roxy-gateway/internal/policy/remote.go`). No cambia
-cuando la verificación pase a Z3:
+| | qué es | contrato | estado |
+|---|---|---|---|
+| **`engine/`** (Rust) | El motor real: compila las reglas a una política formal, decide de forma determinista sobre ella y la audita con Z3. Ver [Aegis Gate](#aegis-gate) más abajo. | `{rules, prompt}` | **es el que corre en producción** |
+| `evaluator.py` (Python) | Fallback mínimo para desarrollo local: dos comprobaciones escritas a mano para el escenario de facturas de la demo. | `{mcp, request, time}` | solo local, no es la implementación del bloque |
 
+## Cuál está conectado
+
+`roxy-gateway/internal/policy/remote.go` hace `POST` a `EVALUATOR_URL` con
+`{rules: string[], prompt: string}`. Ese es el contrato vigente, y **`engine/`
+es el que lo habla**.
+
+Se puede comprobar sin leer configuración, mirando los logs de seguridad: cada
+evaluador deja una firma distinta en `description`.
+
+| origen | formato del motivo |
+|---|---|
+| `engine/` (Rust) | `operation 1 (write on 'invoices') is denied by rule priority 1` |
+| `evaluator.py` | `proposedTotal (0) no coincide con computedSubtotalSum (600000)` |
+
+```bash
+curl -s "https://roxygt.lat/api/log?limit=40" | grep -o "operation [0-9].*"
 ```
-POST /evaluate
-  entra {"mcp": {id, name, description, rules}, "request": {accessedBy, action, payload}, "time"}
-  sale  {"allowed": bool, "violatedPriority": int|null, "reason": str}
+
+⚠️ **`evaluator.py` NO habla el contrato actual del gateway.** Espera
+`{mcp, request, time}` y responde `422` ante `{rules, prompt}`, que el gateway
+traduce a `503`. Apuntar `EVALUATOR_URL` ahí rompe la mitad "con Roxy" de la
+demo. Está pendiente hacerlo aceptar las dos formas — ver `research/ISSUES.md`.
+
+## Correr el motor real
+
+```bash
+cd engine
+cargo test        # incluye los tests de Z3
+cargo run         # sirve POST /evaluate, POST /audit, GET /health
 ```
 
-`violatedPriority` es la prioridad de la primera regla que aplique: el
-gateway reporta una sola.
+Y en el gateway: `EVALUATOR_URL=http://localhost:8080/evaluate`.
 
-## Correr
+## Correr el fallback de Python
+
+Solo si no hay toolchain de Rust a mano y alcanza con el escenario de
+facturas. Requiere ajustar el contrato primero (ver el aviso de arriba).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn evaluator:app --port 9000
+python3 -m pytest tests/ -q     # 7 tests
 ```
 
-Y en el gateway: `EVALUATOR_URL=http://localhost:9000/evaluate`.
+## Dónde entra Z3
 
-## Tests
+El LLM traduce las reglas en lenguaje natural a una política formal **una
+sola vez** (compilada y cacheada). A partir de ahí no hay LLM en el camino de
+la decisión: se evalúa sobre esa política congelada.
 
-```bash
-python3 -m pytest tests/ -q
-```
+Z3 corre sobre esa política ya compilada y responde preguntas que un LLM no
+puede responder — no sobre *esta* petición, sino sobre *el conjunto de reglas*:
 
-7 tests, sin nada levantado.
+- `noDestructiveBypass` — ¿existe alguna acción destructiva que se cuele por
+  las reglas escritas? Si la hay, Z3 devuelve el **contraejemplo concreto**.
+- `deadRules` — reglas que nunca se pueden activar.
+- `conflicts` — reglas de igual prioridad que se contradicen.
 
-## Estado
+Se expone en `POST /audit` y también se calcula dentro del pipeline de
+`/evaluate` (`engine/src/service.rs`).
 
-`evaluator.py` comprueba a mano los dos invariantes de facturación que hoy
-usa la demo (el total tiene que cuadrar con las líneas; cerrar como `paid`
-exige registro de auditoría). Es lo mínimo para que el gateway tenga a quién
-preguntarle. Lo que falta es el trabajo del bloque: traducir reglas y
-contexto de lenguaje natural a Z3 y resolver ahí, en vez de tener las
-comprobaciones escritas una por una.
+---
+
 # Aegis Gate
 
 A **deterministic action firewall** for autonomous agents. It intercepts the action an
