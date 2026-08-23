@@ -227,3 +227,35 @@ def test_un_purpose_distinto_si_es_un_agente_nuevo(roxy, registro):
     chain_start(roxy, padre, purpose="Delegar grupo A")
     chain_start(roxy, uuid4(), parent_run_id=padre, purpose="Conciliar INV-1005")
     assert len(registro.cuerpos) == 2
+
+
+def test_avisa_cuando_no_puede_registrar(caplog):
+    """Fail-open no puede ser mudo: sin aviso, el usuario se entera recien
+    al mirar un arbol vacio y no sabe por que."""
+    with requests_mock.Mocker() as m:
+        m.post(f"{API}/agents", status_code=404, text="not found")
+        roxy = Roxy(api_url=API)
+        with caplog.at_level("WARNING", logger="roxy"):
+            chain_start(roxy, uuid4(), purpose="tarea")
+    assert "no se pudo registrar la traza" in caplog.text
+    assert API in caplog.text
+
+
+def test_el_aviso_no_se_repite(caplog):
+    """Una corrida con decenas de nodos no debe escupir decenas de avisos."""
+    with requests_mock.Mocker() as m:
+        m.post(f"{API}/agents", status_code=404, text="not found")
+        roxy = Roxy(api_url=API)
+        with caplog.at_level("WARNING", logger="roxy"):
+            for _ in range(5):
+                chain_start(roxy, uuid4(), purpose="tarea")
+    assert caplog.text.count("no se pudo registrar la traza") == 1
+
+
+def test_avisa_tambien_si_la_api_esta_caida(caplog):
+    with requests_mock.Mocker() as m:
+        m.post(f"{API}/agents", exc=requests.exceptions.ConnectionError)
+        roxy = Roxy(api_url=API)
+        with caplog.at_level("WARNING", logger="roxy"):
+            chain_start(roxy, uuid4(), purpose="tarea")
+    assert "no se pudo registrar la traza" in caplog.text

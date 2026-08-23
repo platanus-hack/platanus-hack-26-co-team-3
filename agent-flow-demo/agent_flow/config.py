@@ -13,7 +13,7 @@ MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
 BILLING_DB_NAME = os.environ.get("BILLING_DB_NAME", "demo_billing")
 
 # API del dashboard (bloque 3): registra el arbol de delegacion en /agents.
-DASHBOARD_API_URL = os.environ.get("DASHBOARD_API_URL", "http://localhost:8000").rstrip("/")
+DASHBOARD_API_URL = os.environ.get("DASHBOARD_API_URL", "https://roxygt.lat/api").rstrip("/")
 
 ROXY_ENABLED = os.environ.get("ROXY_ENABLED", "false").lower() == "true"
 ROXY_URL = os.environ.get("ROXY_URL", "http://localhost:8080").rstrip("/")

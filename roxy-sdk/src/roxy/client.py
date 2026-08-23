@@ -3,12 +3,15 @@
 El SDK corre dentro del proceso del cliente, que no tiene -ni deberia
 tener- acceso a la base de Roxy: todo sale por HTTP.
 """
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import requests
 
 DEFAULT_TIMEOUT = 10
+
+logger = logging.getLogger("roxy")
 
 
 class RoxyUnavailable(Exception):
@@ -32,6 +35,9 @@ class RoxyClient:
         self._session = requests.Session()
         if api_key:
             self._session.headers["Authorization"] = f"Bearer {api_key}"
+        # Un aviso por proceso: perder la traza no debe frenar al agente,
+        # pero enterarse recien al mirar un arbol vacio es peor.
+        self._warned = False
 
     # --- trazabilidad -----------------------------------------------------
 
@@ -51,10 +57,24 @@ class RoxyClient:
                 timeout=self.timeout,
             )
             if resp.status_code != 201:
+                self._warn(f"respondio {resp.status_code}: {resp.text[:120]}")
                 return None
             return resp.json()["_id"]
-        except Exception:
+        except Exception as exc:
+            self._warn(f"{type(exc).__name__}: {exc}")
             return None
+
+    def _warn(self, detalle: str):
+        if self._warned:
+            return
+        self._warned = True
+        logger.warning(
+            "roxy: no se pudo registrar la traza en %s/agents (%s). "
+            "La corrida sigue, pero el arbol va a quedar vacio. "
+            "Revisa api_url o si el servicio esta arriba. "
+            "Este aviso no se repite.",
+            self.api_url, detalle,
+        )
 
     def fetch_agents(self, session_id: str) -> List[Dict[str, Any]]:
         resp = self._session.get(
