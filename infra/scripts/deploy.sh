@@ -7,6 +7,7 @@ API_DIR="$INFRA_DIR/../dashboard/api"
 APP_DIR="$INFRA_DIR/../dashboard/app"
 DEMO_API_DIR="$INFRA_DIR/../demo-api"
 ROXY_GATEWAY_DIR="$INFRA_DIR/../roxy-gateway"
+LANDING_DIR="$INFRA_DIR/../landing-page"
 TFVARS_FILE="terraform.tfvars"
 
 info() { echo ""; echo "==> $*"; }
@@ -16,6 +17,7 @@ DO_API="${2:-true}"
 DO_APP="${3:-true}"
 DO_DEMO_API="${4:-true}"
 DO_ROXY_GATEWAY="${5:-true}"
+DO_LANDING="${6:-true}"
 
 for cmd in terraform docker aws npm; do
   command -v "$cmd" &>/dev/null || { echo "ERROR: $cmd is required but not installed."; exit 1; }
@@ -192,7 +194,9 @@ DEMO_API_ECS_SERVICE=$(terraform output -raw demo_api_ecs_service_name)
 ROXY_GATEWAY_ECR_REPO_URL=$(terraform output -raw roxy_gateway_ecr_repository_url)
 ROXY_GATEWAY_ECS_SERVICE=$(terraform output -raw roxy_gateway_ecs_service_name)
 CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
+DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw dashboard_cloudfront_distribution_id)
 SITE_URL=$(terraform output -raw site_url)
+LANDING_SITE_URL=$(terraform output -raw landing_site_url)
 
 if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" || "$DO_ROXY_GATEWAY" == "true" ]]; then
   info "Logging in to ECR ($ECR_REGISTRY)..."
@@ -251,16 +255,33 @@ if [[ "$DO_APP" == "true" ]]; then
   info "Building frontend..."
   (cd "$APP_DIR" && VITE_API_URL=/api npm run build)
 
-  info "Syncing frontend to s3://$S3_BUCKET/app..."
+  info "Syncing dashboard to s3://$S3_BUCKET/app (served at $SITE_URL)..."
   aws s3 sync "$APP_DIR/dist/" "s3://$S3_BUCKET/app/" --delete
 
+  info "Invalidating dashboard CloudFront distribution ($DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID)..."
+  aws cloudfront create-invalidation \
+    --distribution-id "$DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID" \
+    --paths "/*" \
+    --region "$AWS_REGION" >/dev/null
+else
+  info "Skipping dashboard build/deploy (do_app=false)"
+fi
+
+if [[ "$DO_LANDING" == "true" ]]; then
+  # No build step — landing-page/ is plain static HTML/CSS, synced as-is.
+  info "Syncing landing page to s3://$S3_BUCKET/landing (served at $LANDING_SITE_URL)..."
+  aws s3 sync "$LANDING_DIR/" "s3://$S3_BUCKET/landing/" --delete \
+    --exclude ".gitkeep" --exclude "README.md"
+else
+  info "Skipping landing page deploy (do_landing=false)"
+fi
+
+if [[ "$DO_LANDING" == "true" ]]; then
   info "Invalidating CloudFront distribution ($CLOUDFRONT_DISTRIBUTION_ID)..."
   aws cloudfront create-invalidation \
     --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
     --paths "/*" \
     --region "$AWS_REGION" >/dev/null
-else
-  info "Skipping frontend build/deploy (do_app=false)"
 fi
 
-info "Deploy complete: $SITE_URL"
+info "Deploy complete: $SITE_URL (landing: $LANDING_SITE_URL)"

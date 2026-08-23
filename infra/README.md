@@ -1,27 +1,45 @@
 # infra
 
 Terraform for deploying `dashboard/api` (FastAPI backend), `dashboard/app` (React frontend),
-`demo-api` (block 4's demo billing API), `roxy-gateway` (block 2), and a self-hosted MongoDB MCP
-server to AWS, within the AWS Free Tier for a low-traffic project.
+`landing-page` (block 8, the public marketing site), `demo-api` (block 4's demo billing API),
+`roxy-gateway` (block 2), and a self-hosted MongoDB MCP server to AWS, within the AWS Free Tier for
+a low-traffic project.
 
 ## What this creates
 
-- **S3 bucket** (named `var.project_name`) — hosts the built frontend (`app/dist`) under the
-  `app/` prefix, private, only reachable through CloudFront.
-- **CloudFront distribution** — one HTTPS domain for everything. `/*` → S3 (frontend), `/api/*` →
-  the dashboard API, `/gateway/*` → roxy-gateway, `/mcp*` → mcp-server, `/demo-api/*` → demo-api
-  (all four on the EC2 instance). Routing everything through the same domain avoids CORS and avoids
-  the browser blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS
-  certificate. The `/api/*`, `/gateway/*`, and `/demo-api/*` behaviors each have a CloudFront
-  Function that strips their path prefix before forwarding to the origin (`strip_api_prefix.js`,
+- **S3 bucket** (named `var.project_name`) — hosts two static sites, private, only reachable
+  through CloudFront: the built dashboard (`dashboard/app/dist`) under the `app/` prefix, and the
+  landing page (`landing-page/`, no build step — plain HTML/CSS) under the `landing/` prefix.
+- **Two CloudFront distributions**:
+  - `aws_cloudfront_distribution.app` (`dashboard_domain_aliases`, default `roxygt.lat`) — "the
+    app": `/` → S3 (the dashboard, block 3 — the `app/` prefix the dashboard build syncs to, served
+    at this distribution's root, no path stripping needed), `/api/*` → the dashboard API,
+    `/gateway/*` → roxy-gateway, `/mcp*` → mcp-server, `/demo-api/*` → demo-api (all four on the EC2
+    instance). Everything app-related — UI and every backend — lives on this one domain, matching
+    every hardcoded `https://roxygt.lat/api`, `/gateway`, `/demo-api`, `/mcp` reference across the
+    other blocks (roxy-gateway, roxy-sdk, agent-flow-demo, etc.).
+  - `aws_cloudfront_distribution.landing` (`domain_aliases`, e.g. `landing.roxygt.lat`) — the
+    public marketing site (block 8) only: `/` → S3 (the `landing/` prefix). No EC2
+    origins/behaviors at all — the landing page never calls the backend, so this distribution
+    stays dead simple.
+
+  Routing the dashboard's own API calls through its own domain avoids CORS and avoids the browser
+  blocking mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS certificate. The
+  `/api/*`, `/gateway/*`, and `/demo-api/*` behaviors each have a CloudFront Function that strips
+  their path prefix before forwarding to the origin (`strip_api_prefix.js`,
   `strip_gateway_prefix.js`, `strip_demo_api_prefix.js`) — so `/gateway/v1/evaluate` reaches
-  roxy-gateway as `/v1/evaluate`, and `/demo-api/invoices` reaches demo-api as `/invoices`. `/mcp*`
-  has no such function: mongodb-mcp-server's HTTP endpoint is a single fixed path, `/mcp` (not a
-  prefix scheme), so the CDN path already matches the origin path 1:1 with no rewrite needed.
-- **CloudFront Origin Access Control (OAC)** — used only on the S3 origin. The bucket policy grants
-  `s3:GetObject` on `app/*` to `cloudfront.amazonaws.com`, scoped by an `AWS:SourceArn` condition to
-  this specific distribution, so nothing else (not even other CloudFront distributions) can read
-  the bucket.
+  roxy-gateway as `/v1/evaluate`. `/mcp*` has no such function: mongodb-mcp-server's HTTP endpoint
+  is a single fixed path, `/mcp` (not a prefix scheme), so the CDN path already matches the origin
+  path 1:1 with no rewrite needed.
+- **CloudFront Origin Access Control (OAC)** — one OAC, shared by both S3 origins across both
+  distributions (OAC isn't distribution-scoped). The bucket policy grants `s3:GetObject` on `app/*`
+  to `cloudfront.amazonaws.com` scoped by an `AWS:SourceArn` condition to the `app` distribution
+  specifically, and `landing/*` scoped to the `landing` distribution specifically — so nothing
+  else, not even the other distribution, can read either prefix.
+- **API security group ingress**: the rule allowing ports 8000-8003 references the AWS-managed
+  `com.amazonaws.global.cloudfront.origin-facing` prefix list, not a specific distribution ARN —
+  it already covers every CloudFront distribution's edge IPs, with no extra configuration needed
+  from having two distributions (only `app` actually calls the EC2 origins, though).
 - **ECS cluster running on a single EC2 instance** (`t3a.small`) — **four** ECS services share this
   one instance/cluster, each an EC2-launch-type task with host networking (a hand-installed process
   each, essentially, but ECS-managed):
@@ -108,8 +126,8 @@ eight are non-secret and get saved to `terraform.tfvars` (gitignored), so the ne
 back as defaults instead of asking from scratch. Any of the ten can also come from the environment
 instead of a prompt (see `./scripts/deploy-from-env.sh` below) — whichever are already set are used
 as-is, only what's missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh
-<do_infra> <do_api> <do_app> <do_demo_api> <do_roxy_gateway>` (each `true`/`false`, all default
-`true`).
+<do_infra> <do_api> <do_app> <do_demo_api> <do_roxy_gateway> <do_landing>` (each `true`/`false`, all
+default `true`).
 
 ```bash
 cd infra
@@ -168,15 +186,27 @@ aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-dem
 aws ecs update-service --cluster roxy-dashboard-api --service roxy-dashboard-roxy-gateway --force-new-deployment --region us-east-1
 ```
 
-Then build and deploy the frontend against this deployment:
+Then build and deploy the two static sites against this deployment:
 
 ```bash
 cd ../dashboard/app
 VITE_API_URL=/api npm run build
 aws s3 sync dist/ "s3://$(terraform -chdir=../../infra output -raw s3_bucket_name)/app/" --delete
+
+aws cloudfront create-invalidation \
+  --distribution-id "$(terraform -chdir=../../infra output -raw dashboard_cloudfront_distribution_id)" \
+  --paths "/*" --region us-east-1
+
+cd ../../landing-page
+aws s3 sync . "s3://$(terraform -chdir=../infra output -raw s3_bucket_name)/landing/" --delete \
+  --exclude ".gitkeep" --exclude "README.md"
+
+aws cloudfront create-invalidation \
+  --distribution-id "$(terraform -chdir=../infra output -raw cloudfront_distribution_id)" \
+  --paths "/*" --region us-east-1
 ```
 
-`terraform output site_url` is the URL to open.
+`terraform output site_url` is the app URL (dashboard + every API, `https://roxygt.lat` by default); `terraform output landing_site_url` is the marketing landing page's own URL (`https://landing.roxygt.lat` by default).
 
 ## Redeploying an API after a code change
 

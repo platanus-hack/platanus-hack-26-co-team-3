@@ -113,6 +113,13 @@ variable "acm_certificate_arn" {
 }
 
 variable "domain_aliases" {
-  type    = list(string)
-  default = []
+  description = "Aliases for the landing page's CloudFront distribution (aws_cloudfront_distribution.landing), e.g. landing.roxygt.lat."
+  type        = list(string)
+  default     = []
+}
+
+variable "dashboard_domain_aliases" {
+  description = "Aliases for the app's (dashboard + API) CloudFront distribution (aws_cloudfront_distribution.app), e.g. roxygt.lat. Needs acm_certificate_arn to cover these names (SAN or wildcard) — same certificate as domain_aliases."
+  type        = list(string)
+  default     = ["roxygt.lat"]
 }

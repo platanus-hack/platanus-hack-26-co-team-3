@@ -1,15 +1,36 @@
 output "site_url" {
-  description = "Public URL for the deployed dashboard — frontend and /api/* are both served over HTTPS through this one CloudFront domain."
-  value       = "https://${length(var.domain_aliases) > 0 ? var.domain_aliases[0] : aws_cloudfront_distribution.app.domain_name}"
+  description = "Public URL for the app (dashboard at /, plus every API) — served over HTTPS through this CloudFront domain. The landing page has its own distribution/domain, see landing_site_url."
+  value       = "https://${length(var.dashboard_domain_aliases) > 0 ? var.dashboard_domain_aliases[0] : aws_cloudfront_distribution.app.domain_name}"
+}
+
+output "dashboard_site_url" {
+  description = "Public URL for the dashboard (same distribution/domain as site_url — kept as an alias for clarity)."
+  value       = "https://${length(var.dashboard_domain_aliases) > 0 ? var.dashboard_domain_aliases[0] : aws_cloudfront_distribution.app.domain_name}"
+}
+
+output "dashboard_cloudfront_distribution_id" {
+  description = "App (dashboard + API) distribution id, for invalidations after deploying dashboard/app."
+  value       = aws_cloudfront_distribution.app.id
+}
+
+output "landing_site_url" {
+  description = "Public URL for the landing page's own CloudFront distribution."
+  value       = "https://${length(var.domain_aliases) > 0 ? var.domain_aliases[0] : aws_cloudfront_distribution.landing.domain_name}"
 }
 
 output "s3_bucket_name" {
-  description = "Bucket to sync the built frontend (dashboard/app/dist) into, under the app/ prefix."
+  description = "Bucket to sync built/static frontends into: dashboard/app/dist under the app/ prefix, landing-page/ under the landing/ prefix."
   value       = aws_s3_bucket.app.id
 }
 
+output "landing_base_url" {
+  description = "Path the landing page is served under through CloudFront — the CDN root of the landing distribution."
+  value       = "/"
+}
+
 output "cloudfront_distribution_id" {
-  value = aws_cloudfront_distribution.app.id
+  description = "Landing distribution id, for invalidations after deploying landing-page."
+  value       = aws_cloudfront_distribution.landing.id
 }
 
 output "frontend_build_api_base_url" {

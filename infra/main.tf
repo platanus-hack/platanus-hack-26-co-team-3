@@ -21,6 +21,14 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Renamed in place (was originally created as the dashboard's dedicated distribution, now
+# repurposed to serve only the landing page) — a moved block avoids a slow CloudFront
+# destroy+recreate for what's purely a Terraform-side address change.
+moved {
+  from = aws_cloudfront_distribution.dashboard
+  to   = aws_cloudfront_distribution.landing
+}
+
 resource "aws_s3_bucket" "app" {
   bucket        = var.project_name
   force_destroy = true
@@ -87,13 +95,13 @@ resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  comment             = "${var.project_name} frontend + API"
+  comment             = "${var.project_name} app (dashboard + API) — roxygt.lat"
   price_class         = "PriceClass_100"
-  aliases             = var.domain_aliases
+  aliases             = var.dashboard_domain_aliases
 
   origin {
     domain_name              = aws_s3_bucket.app.bucket_regional_domain_name
-    origin_id                = "s3-frontend"
+    origin_id                = "s3-dashboard"
     origin_access_control_id = aws_cloudfront_origin_access_control.app.id
     origin_path              = "/app"
   }
@@ -146,10 +154,14 @@ resource "aws_cloudfront_distribution" "app" {
     }
   }
 
+  # Root is the dashboard (block 3) — this distribution is roxygt.lat, "the app" (matches
+  # every hardcoded https://roxygt.lat/api, /gateway, /demo-api, /mcp reference across the
+  # other blocks). The landing page (block 8) has its own CDN (see
+  # aws_cloudfront_distribution.landing below) at landing.roxygt.lat and isn't served here.
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "s3-frontend"
+    target_origin_id       = "s3-dashboard"
     viewer_protocol_policy = "redirect-to-https"
     cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
     compress               = true
@@ -215,6 +227,63 @@ resource "aws_cloudfront_distribution" "app" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.strip_demo_api_prefix.arn
     }
+  }
+
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = var.acm_certificate_arn == null
+    acm_certificate_arn            = var.acm_certificate_arn
+    ssl_support_method             = var.acm_certificate_arn != null ? "sni-only" : null
+    minimum_protocol_version       = var.acm_certificate_arn != null ? "TLSv1.2_2021" : null
+  }
+
+  tags = {
+    Project = var.project_name
+  }
+}
+
+# Landing page (block 8): its own CDN at landing.roxygt.lat, separate from the app (dashboard
+# + API) distribution above. Pure static site, no EC2 origins/behaviors — the landing page
+# never calls the backend, so this distribution stays dead simple.
+resource "aws_cloudfront_distribution" "landing" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  comment             = "${var.project_name} landing — landing.roxygt.lat"
+  price_class         = "PriceClass_100"
+  aliases             = var.domain_aliases
+
+  origin {
+    domain_name              = aws_s3_bucket.app.bucket_regional_domain_name
+    origin_id                = "s3-landing"
+    origin_access_control_id = aws_cloudfront_origin_access_control.app.id
+    origin_path              = "/landing"
+  }
+
+  default_cache_behavior {
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "s3-landing"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
+    compress               = true
   }
 
   custom_error_response {

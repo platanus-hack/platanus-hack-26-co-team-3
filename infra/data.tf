@@ -20,7 +20,7 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host" {
 
 data "aws_iam_policy_document" "app_bucket" {
   statement {
-    sid       = "AllowCloudFrontRead"
+    sid       = "AllowCloudFrontReadDashboard"
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.app.arn}/app/*"]
 
@@ -33,6 +33,23 @@ data "aws_iam_policy_document" "app_bucket" {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
       values   = [aws_cloudfront_distribution.app.arn]
+    }
+  }
+
+  statement {
+    sid       = "AllowCloudFrontReadLanding"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.app.arn}/landing/*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.landing.arn]
     }
   }
 }

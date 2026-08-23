@@ -7,9 +7,9 @@ set -euo pipefail
 # REPLACE_INSTANCE from an .env file and exports them, so deploy.sh finds them already set
 # and skips its interactive prompts entirely. Useful for CI or repeatable local deploys. Any
 # arguments passed to this script forward straight to deploy.sh (the
-# do_infra/do_api/do_app/do_demo_api/do_roxy_gateway flags).
+# do_infra/do_api/do_app/do_demo_api/do_roxy_gateway/do_landing flags).
 #
-# Usage: ./scripts/deploy-from-env.sh [do_infra] [do_api] [do_app] [do_demo_api] [do_roxy_gateway]
+# Usage: ./scripts/deploy-from-env.sh [do_infra] [do_api] [do_app] [do_demo_api] [do_roxy_gateway] [do_landing]
 # Env:   ENV_FILE — path to the .env file (default: infra/.env)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
