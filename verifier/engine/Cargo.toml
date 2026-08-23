@@ -1,0 +1,39 @@
+[package]
+name = "aegis_gate_engine"
+version = "0.2.0"
+edition = "2021"
+description = "Deterministic MCP access-policy evaluator with Z3 proofs (Aegis Gate)"
+
+[lib]
+name = "aegis_gate_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aegis_gate_engine"
+path = "src/main.rs"
+
+[dependencies]
+# preserve_order keeps serde_json::Value in insertion order so our canonicalizer does
+# the sorting (real determinism tests, not trivially-true ones).
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+thiserror = "2"
+anyhow = "1"
+# Deterministic RFC3339 parsing + timezone-offset math for working-hours attributes.
+# `formatting` lets the /gate adapter stamp the current time when the caller omits it.
+time = { version = "0.3", features = ["parsing", "formatting"] }
+# Blocking HTTP for the LLM rule compiler (UsePod, OpenAI-compatible). No async runtime.
+ureq = { version = "2", features = ["json"] }
+
+# Z3 is the decision kernel + policy prover. bundled = compiled into the binary
+# (no runtime libz3 → deployable without installing Z3). Requires cmake at build time.
+z3 = { version = "0.20", features = ["bundled"] }
+
+# HTTP surface (R4).
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+tower-http = { version = "0.6", features = ["cors"] }
+dotenvy = "0.15"
+
+[dev-dependencies]
