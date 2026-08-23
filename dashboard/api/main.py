@@ -21,8 +21,8 @@ app = FastAPI(title="Roxy Dashboard API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_methods=["GET", "POST"],
+    allow_origins=["http://localhost:5173", "http://localhost:5183"],
+    allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
 )
 
