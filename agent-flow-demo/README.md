@@ -9,8 +9,20 @@ camino.
 1. `mongo-data/run.sh` — Mongo local en `:27017` (bases `roxy` y, una vez
    que corra `demo-api`, `demo_billing`).
 2. `demo-api` (`./run.sh` en esa carpeta) — API víctima en `:8001`.
-3. `roxy-gateway` (`go run ./cmd/roxy` en esa carpeta) — gateway en `:8080`,
-   solo si vas a correr con `--roxy on`.
+3. Solo para `--roxy on --local`, dos procesos más:
+   - un evaluador en `:9000` — mientras el bloque 10 no exista,
+     `uvicorn scripts.stub_evaluator:app --port 9000` desde esta carpeta;
+   - `roxy-gateway` en `:8080`, que no arranca sin las tres variables:
+
+     ```bash
+     cd ../roxy-gateway
+     MONGO_URI=mongodb://localhost:27017 \
+     EVALUATOR_URL=http://localhost:9000/evaluate \
+     ANTHROPIC_API_KEY=... \
+     go run ./cmd/roxy
+     ```
+
+   Con `--roxy on` a secas se usa la Roxy desplegada y nada de esto hace falta.
 
 ## Setup
 
@@ -28,7 +40,7 @@ python3 scripts/register_invoices_mcp.py   # una vez, mientras Mongo esté arrib
 python3 -m pytest tests/ -q
 ```
 
-36 tests, sin servicios levantados (HTTP y Mongo mockeados). Cubren la
+22 tests, sin servicios levantados (HTTP y Mongo mockeados). Cubren la
 traducción de la respuesta de Roxy a permiso/negación, el corte por
 denegaciones, el reparto recursivo de facturas y la reconstrucción del
 árbol de delegación.
@@ -41,9 +53,32 @@ que falta en vez de un traceback.
 
 ## Correr
 
+`run.sh` resuelve el venv, las dependencias y a qué Roxy se le pregunta; la
+flag `--roxy` de `run_demo.py` sigue siendo la que manda sobre `.env`.
+
 ```bash
-python3 run_demo.py --roxy off   # corrompe datos, no hay nada del lado de Roxy
-python3 run_demo.py --roxy on    # Roxy evalúa cada update_invoice antes de escribir
+./run.sh off              # sin Roxy: los subagentes escriben directo
+./run.sh on               # con la Roxy desplegada (roxygt.lat/gateway)
+./run.sh on --local       # con un gateway en localhost:8080
+./run.sh on --dashboard-local   # además, traza contra dashboard/api local
+```
+
+`compare.sh` corre las dos y contrasta en qué estado quedaron las facturas:
+
+```bash
+./compare.sh              # contra la Roxy desplegada
+./compare.sh --local      # contra la Roxy local
+```
+
+Deja los logs de ambas corridas en `runs/<timestamp>/` y termina con el
+resumen: consistencia antes/después de cada una y cuántas operaciones negó
+Roxy.
+
+Sin los wrappers es lo mismo de siempre:
+
+```bash
+python3 run_demo.py --roxy off
+python3 run_demo.py --roxy on
 ```
 
 Cada corrida resetea `demo-api` a datos limpios y vuelve a inyectar las
@@ -68,4 +103,10 @@ haga falta sin arrastrar corrupción de la corrida anterior.
   instancia de `Roxy` se pasa como callback y registra el árbol en
   `/agents` sola.
 - `scripts/register_invoices_mcp.py` — upsert de `invoices-mcp` en
-  `roxy.mcps` (no toca `mongo-data/population/mcps.mock.json`).
+  `roxy.mcps` (no toca `mongo-data/population/mcps.mock.json`). El
+  `server.url` apunta a demo-api por HTTP: cuando Roxy aprueba, le pega al
+  MCP, y una URL que no sea HTTP alcanzable desde el gateway deja al planner
+  sin nada que llamar y devuelve 503 en toda operación permitida.
+- `scripts/stub_evaluator.py` — evaluador de mentira para probar en local
+  mientras el bloque 10 no exista (`uvicorn scripts.stub_evaluator:app
+  --port 9000`). No va a la demo.
