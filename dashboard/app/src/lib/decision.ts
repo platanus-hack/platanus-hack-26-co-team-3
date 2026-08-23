@@ -37,6 +37,53 @@ export function decisionFacts(log: SecurityLog): DecisionFacts {
   }
 }
 
+/**
+ * The engine writes its reason in English, in its own vocabulary
+ * ("operation 2 (write on 'invoices') is denied by rule priority 1"). Nobody
+ * watching the demo should have to decode that. Split it into the two
+ * questions a person actually asks: what did the agent try, and what did Roxy
+ * do about it.
+ */
+
+const OP_PARTS_RE = /^([a-z/]+)\s+on\s+'([^']+)'$/i
+
+/** The engine's operation verbs, as they appear in `operation (...)`. */
+const VERBS: Record<string, string> = {
+  read: 'Leer',
+  write: 'Escribir en',
+  'write/destructive': 'Escribir o borrar en',
+  destructive: 'Borrar en',
+}
+
+export interface DecisionExplanation {
+  /** What the agent tried to do, in Spanish. Null when it can't be read. */
+  attempt: string | null
+  /** What Roxy decided, in Spanish. */
+  verdict: string
+}
+
+export function explainDecision(log: SecurityLog): DecisionExplanation {
+  const facts = decisionFacts(log)
+  const parts = facts.operation?.match(OP_PARTS_RE)
+
+  let attempt: string | null = null
+  if (parts) {
+    const verb = VERBS[parts[1].toLowerCase()] ?? parts[1]
+    attempt = `${verb} ${parts[2]}`
+  } else if (log.action) {
+    attempt = `Ejecutar ${log.action}`
+  }
+
+  const denied = log.status === 'denied'
+  const verdict = denied
+    ? facts.rulePriority !== null
+      ? `Bloqueado por la regla ${facts.rulePriority}`
+      : 'Bloqueado'
+    : 'Permitido — ninguna regla lo impide'
+
+  return { attempt, verdict }
+}
+
 /** Free-text match across the fields someone would actually search by. */
 export function logMatches(log: SecurityLog, query: string): boolean {
   const q = query.trim().toLowerCase()

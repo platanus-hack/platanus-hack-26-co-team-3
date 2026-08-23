@@ -11,7 +11,7 @@ interface SessionListProps {
 export function SessionList({ sessions, selectedSessionId, onSelect }: SessionListProps) {
   return (
     <div className="agents-sessions">
-      {sessions.length === 0 && <div className="empty-state">No runs recorded yet.</div>}
+      {sessions.length === 0 && <div className="empty-state">Todavía no hay corridas.</div>}
       {sessions.map((session) => {
         const tokens = outcomeTokens(session.outcome)
         const active = session.sessionId === selectedSessionId
@@ -26,7 +26,7 @@ export function SessionList({ sessions, selectedSessionId, onSelect }: SessionLi
             <span className="session-card-body">
               <span className="session-card-title">{session.rootPurpose}</span>
               <span className="session-card-meta mono">
-                {session.agentCount} agents &middot; {formatRelativeTime(session.startedAt)}
+                {session.agentCount} agentes &middot; {formatRelativeTime(session.startedAt)}
               </span>
             </span>
           </button>

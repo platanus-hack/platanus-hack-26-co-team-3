@@ -9,13 +9,13 @@ export interface OutcomeTokens {
 
 export function outcomeTokens(outcome: AgentOutcome | null): OutcomeTokens {
   if (outcome === 'error') {
-    return { label: 'Error', color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)' }
+    return { label: 'Falló', color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)' }
   }
   if (outcome === 'denied') {
-    return { label: 'Denied by Roxy', color: 'var(--accent)', bg: 'var(--accent-bg)', border: 'var(--accent-border)' }
+    return { label: 'Bloqueado por Roxy', color: 'var(--held)', bg: 'var(--held-bg)', border: 'var(--held-border)' }
   }
   if (outcome === 'ok') {
     return { label: 'OK', color: 'var(--green)', bg: 'var(--green-bg)', border: 'var(--green-border)' }
   }
-  return { label: 'No verdict', color: 'var(--text-muted)', bg: 'var(--panel)', border: 'var(--border)' }
+  return { label: 'Sin veredicto', color: 'var(--text-muted)', bg: 'var(--panel)', border: 'var(--border)' }
 }
