@@ -468,6 +468,7 @@ resource "aws_ecs_task_definition" "roxy_gateway" {
       { name = "PORT", value = "8002" },
       { name = "MONGO_DB_NAME", value = var.mongo_db },
       { name = "EVALUATOR_URL", value = var.evaluator_url },
+      { name = "DASHBOARD_URL", value = var.dashboard_url },
       { name = "MONGO_URI", value = var.mongo_uri },
     ]
     logConfiguration = {

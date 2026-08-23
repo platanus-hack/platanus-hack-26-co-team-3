@@ -31,12 +31,14 @@ EXISTING_SUBNET_ID=""
 EXISTING_ACM_ARN=""
 EXISTING_DOMAIN_ALIASES=""
 EXISTING_EVALUATOR_URL=""
+EXISTING_DASHBOARD_URL=""
 if [[ -f "$TFVARS_FILE" ]]; then
   EXISTING_VPC_ID=$(sed -n -E 's/^vpc_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_SUBNET_ID=$(sed -n -E 's/^subnet_id *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_ACM_ARN=$(sed -n -E 's/^acm_certificate_arn *= *"(.*)"$/\1/p' "$TFVARS_FILE")
   EXISTING_DOMAIN_ALIASES=$(sed -n -E 's/^domain_aliases *= *\[(.*)\]$/\1/p' "$TFVARS_FILE" | sed -E 's/"//g; s/, */,/g')
   EXISTING_EVALUATOR_URL=$(sed -n -E 's/^evaluator_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
+  EXISTING_DASHBOARD_URL=$(sed -n -E 's/^dashboard_url *= *"(.*)"$/\1/p' "$TFVARS_FILE")
 fi
 
 info "Configuration"
@@ -83,11 +85,20 @@ if [[ -z "$EVALUATOR_URL" ]]; then
 fi
 [[ -n "$EVALUATOR_URL" ]] || { echo "ERROR: evaluator_url is required (roxy-gateway refuses to start without it)."; exit 1; }
 
+DASHBOARD_URL="${DASHBOARD_URL:-}"
+if [[ -z "$DASHBOARD_URL" ]]; then
+  read -r -p "Dashboard URL (dashboard_url, optional — blank uses the default, http://localhost:8000/log)${EXISTING_DASHBOARD_URL:+ [$EXISTING_DASHBOARD_URL]}: " DASHBOARD_URL
+  DASHBOARD_URL="${DASHBOARD_URL:-$EXISTING_DASHBOARD_URL}"
+fi
+
 info "Writing $TFVARS_FILE..."
 {
   echo "vpc_id = \"$VPC_ID\""
   echo "subnet_id = \"$SUBNET_ID\""
   echo "evaluator_url = \"$EVALUATOR_URL\""
+  if [[ -n "$DASHBOARD_URL" ]]; then
+    echo "dashboard_url = \"$DASHBOARD_URL\""
+  fi
   if [[ -n "$ACM_CERTIFICATE_ARN" ]]; then
     echo "acm_certificate_arn = \"$ACM_CERTIFICATE_ARN\""
   fi

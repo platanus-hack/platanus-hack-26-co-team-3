@@ -2,10 +2,11 @@
 set -euo pipefail
 
 # Non-interactive wrapper around deploy.sh: reads MONGO_URI, VPC_ID, SUBNET_ID,
-# EVALUATOR_URL, and (optionally) ACM_CERTIFICATE_ARN/DOMAIN_ALIASES from an .env file and
-# exports them, so deploy.sh finds them already set and skips its interactive prompts
-# entirely. Useful for CI or repeatable local deploys. Any arguments passed to this script
-# forward straight to deploy.sh (the do_infra/do_api/do_app/do_demo_api/do_roxy_gateway flags).
+# EVALUATOR_URL, and (optionally) ACM_CERTIFICATE_ARN/DOMAIN_ALIASES/DASHBOARD_URL from an
+# .env file and exports them, so deploy.sh finds them already set and skips its interactive
+# prompts entirely. Useful for CI or repeatable local deploys. Any arguments passed to this
+# script forward straight to deploy.sh (the do_infra/do_api/do_app/do_demo_api/do_roxy_gateway
+# flags).
 #
 # Usage: ./scripts/deploy-from-env.sh [do_infra] [do_api] [do_app] [do_demo_api] [do_roxy_gateway]
 # Env:   ENV_FILE — path to the .env file (default: infra/.env)

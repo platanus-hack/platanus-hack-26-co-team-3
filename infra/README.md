@@ -28,7 +28,10 @@ Tier for a low-traffic project.
   - **roxy-gateway** — port 8002, its own ECR repo, connects to the same `roxy` database as the
     dashboard API (it writes what the dashboard reads). Also needs `evaluator_url`: the URL of the
     policy/verification service it calls per request (block 10, "verifier" — not deployed by this
-    Terraform; point it at wherever that service actually runs).
+    Terraform; point it at wherever that service actually runs). It also POSTs a notification to
+    `dashboard_url` (dashboard API's `POST /log`) on every decision — defaults to
+    `http://localhost:8000/log`, since all three containers share this one instance (host
+    networking), so it never needs to leave the box.
 
   All three ports only accept traffic from CloudFront's IP ranges (the security group, one rule
   covering 8000-8002). The dashboard API and roxy-gateway are both wired into the CloudFront
@@ -84,15 +87,16 @@ aws dynamodb create-table \
 ## Deploy
 
 The easiest path is `./scripts/deploy.sh`, which prompts interactively for `mongo_uri`, `vpc_id`,
-`subnet_id`, `evaluator_url`, `acm_certificate_arn`, and `domain_aliases` (the last two blank to
-skip), then runs `terraform apply` and builds/pushes/deploys the dashboard API, demo-api, and
-roxy-gateway in one shot. `mongo_uri` is entered with hidden input and passed straight to
-`terraform apply -var` — it's never written to disk. The other five are non-secret and get saved to
-`terraform.tfvars` (gitignored), so the next run offers them back as defaults instead of asking from
-scratch. Any of the six can also come from the environment instead of a prompt (see
-`./scripts/deploy-from-env.sh` below) — whichever are already set are used as-is, only what's
-missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh <do_infra>
-<do_api> <do_app> <do_demo_api> <do_roxy_gateway>` (each `true`/`false`, all default `true`).
+`subnet_id`, `evaluator_url`, `dashboard_url`, `acm_certificate_arn`, and `domain_aliases` (the last
+three blank to skip/use defaults), then runs `terraform apply` and builds/pushes/deploys the
+dashboard API, demo-api, and roxy-gateway in one shot. `mongo_uri` is entered with hidden input and
+passed straight to `terraform apply -var` — it's never written to disk. The other six are non-secret
+and get saved to `terraform.tfvars` (gitignored), so the next run offers them back as defaults
+instead of asking from scratch. Any of the seven can also come from the environment instead of a
+prompt (see `./scripts/deploy-from-env.sh` below) — whichever are already set are used as-is, only
+what's missing gets prompted for. Pass positional flags to skip steps: `./scripts/deploy.sh
+<do_infra> <do_api> <do_app> <do_demo_api> <do_roxy_gateway>` (each `true`/`false`, all default
+`true`).
 
 ```bash
 cd infra
@@ -100,9 +104,9 @@ cd infra
 ```
 
 For a non-interactive run (CI, or just avoiding retyping things), `./scripts/deploy-from-env.sh`
-reads `mongo_uri`/`vpc_id`/`subnet_id`/`evaluator_url`/`acm_certificate_arn`/`domain_aliases` from
-an `.env` file and exports them, so `deploy.sh` finds them already set and skips every prompt.
-`mongo_uri`, `vpc_id`, `subnet_id`, and `evaluator_url` are required in `.env`; the other two stay
+reads `mongo_uri`/`vpc_id`/`subnet_id`/`evaluator_url`/`dashboard_url`/`acm_certificate_arn`/`domain_aliases`
+from an `.env` file and exports them, so `deploy.sh` finds them already set and skips every prompt.
+`mongo_uri`, `vpc_id`, `subnet_id`, and `evaluator_url` are required in `.env`; the other three stay
 optional:
 
 ```bash
@@ -116,7 +120,7 @@ To run Terraform yourself instead:
 ```bash
 cd infra
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars: set vpc_id, subnet_id, evaluator_url (and optionally acm_certificate_arn, domain_aliases)
+# edit terraform.tfvars: set vpc_id, subnet_id, evaluator_url (and optionally dashboard_url, acm_certificate_arn, domain_aliases)
 
 terraform init
 terraform apply -var="mongo_uri=mongodb://user:password@host:27017"

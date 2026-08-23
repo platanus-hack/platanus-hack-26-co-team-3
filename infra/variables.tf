@@ -77,6 +77,12 @@ variable "evaluator_url" {
   type        = string
 }
 
+variable "dashboard_url" {
+  description = "URL roxy-gateway POSTs security log notifications to (dashboard API's POST /log). Defaults to the dashboard API over localhost, since both containers share the same EC2 instance (host networking) — no CloudFront/internet round-trip needed. Optional: roxy-gateway no-ops the notification if this is empty."
+  type        = string
+  default     = "http://localhost:8000/log"
+}
+
 variable "acm_certificate_arn" {
   type    = string
   default = null
