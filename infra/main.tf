@@ -114,6 +114,18 @@ resource "aws_cloudfront_distribution" "app" {
     }
   }
 
+  origin {
+    domain_name = aws_eip.api.public_dns
+    origin_id   = "ec2-mcp-server"
+
+    custom_origin_config {
+      http_port              = 8003
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
@@ -153,6 +165,20 @@ resource "aws_cloudfront_distribution" "app" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.strip_gateway_prefix.arn
     }
+  }
+
+  # No prefix-stripping function here: mongodb-mcp-server's HTTP endpoint is a single fixed
+  # path, /mcp (not a prefix scheme like /api/* or /gateway/*), so the CDN path already
+  # matches the origin path 1:1 — CloudFront forwards the request URI unchanged.
+  ordered_cache_behavior {
+    path_pattern             = "/mcp*"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "ec2-mcp-server"
+    viewer_protocol_policy   = "redirect-to-https"
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    compress                 = true
   }
 
   custom_error_response {
@@ -210,16 +236,17 @@ resource "aws_security_group" "api" {
     }
   }
 
-  # Dashboard API (8000), demo-api (8001), and roxy-gateway (8002) as one contiguous
-  # port-range rule, not three separate rules. A rule referencing a managed prefix list
-  # counts against the security group's rule quota once PER ENTRY IN THE LIST (not once
-  # per rule) — the CloudFront origin-facing list has 50-60+ CIDRs, so separate references
-  # to it blow past the default 60-rules-per-security-group quota fast. One reference fits
-  # comfortably; keep any future service on this instance on the next contiguous port too.
+  # Dashboard API (8000), demo-api (8001), roxy-gateway (8002), and mcp-server (8003) as
+  # one contiguous port-range rule, not four separate rules. A rule referencing a managed
+  # prefix list counts against the security group's rule quota once PER ENTRY IN THE LIST
+  # (not once per rule) — the CloudFront origin-facing list has 50-60+ CIDRs, so separate
+  # references to it blow past the default 60-rules-per-security-group quota fast. One
+  # reference fits comfortably; keep any future service on this instance on the next
+  # contiguous port too.
   ingress {
-    description     = "Dashboard API + demo-api + roxy-gateway, only from CloudFront IP ranges"
+    description     = "Dashboard API + demo-api + roxy-gateway + mcp-server, only from CloudFront IP ranges"
     from_port       = 8000
-    to_port         = 8002
+    to_port         = 8003
     protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
   }
@@ -486,6 +513,62 @@ resource "aws_ecs_service" "roxy_gateway" {
   name            = "${var.project_name}-roxy-gateway"
   cluster         = aws_ecs_cluster.api.id
   task_definition = aws_ecs_task_definition.roxy_gateway.arn
+  desired_count   = 1
+  launch_type     = "EC2"
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+}
+
+# mcp-server: a fourth ECS service on the same EC2 instance/cluster, on its own port
+# (8003), running the official self-hosted mongodb-mcp-server image (public Docker Hub
+# image — no ECR repo/build step, unlike the other three services which build from source
+# in this repo). Talks directly to mongo_uri, no OAuth/Service Account — sidesteps the
+# hosted Atlas Managed MCP Server (mcp.mongodb.com) entirely. Reachable from roxy-gateway
+# (and anything else on this instance) at mcp_server_url.
+resource "aws_cloudwatch_log_group" "mcp_server" {
+  name              = "/ecs/${var.project_name}-mcp-server"
+  retention_in_days = 3
+}
+
+resource "aws_ecs_task_definition" "mcp_server" {
+  family             = "${var.project_name}-mcp-server"
+  network_mode       = "host"
+  task_role_arn      = aws_iam_role.api.arn
+  execution_role_arn = aws_iam_role.api.arn
+
+  container_definitions = jsonencode([{
+    name              = "mcp-server"
+    image             = "mongodb/mongodb-mcp-server:${var.mcp_server_image_tag}"
+    essential         = true
+    memory            = 200
+    memoryReservation = 80
+    portMappings = [{
+      containerPort = 8003
+      hostPort      = 8003
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "MDB_MCP_TRANSPORT", value = "http" },
+      { name = "MDB_MCP_HTTP_HOST", value = "0.0.0.0" },
+      { name = "MDB_MCP_HTTP_PORT", value = "8003" },
+      { name = "MDB_MCP_CONNECTION_STRING", value = var.mongo_uri },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.mcp_server.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+  }])
+}
+
+resource "aws_ecs_service" "mcp_server" {
+  name            = "${var.project_name}-mcp-server"
+  cluster         = aws_ecs_cluster.api.id
+  task_definition = aws_ecs_task_definition.mcp_server.arn
   desired_count   = 1
   launch_type     = "EC2"
 

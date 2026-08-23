@@ -1,25 +1,28 @@
 # infra
 
 Terraform for deploying `dashboard/api` (FastAPI backend), `dashboard/app` (React frontend),
-`demo-api` (block 4's demo billing API), and `roxy-gateway` (block 2) to AWS, within the AWS Free
-Tier for a low-traffic project.
+`demo-api` (block 4's demo billing API), `roxy-gateway` (block 2), and a self-hosted MongoDB MCP
+server to AWS, within the AWS Free Tier for a low-traffic project.
 
 ## What this creates
 
 - **S3 bucket** (named `var.project_name`) — hosts the built frontend (`app/dist`) under the
   `app/` prefix, private, only reachable through CloudFront.
 - **CloudFront distribution** — one HTTPS domain for everything. `/*` → S3 (frontend), `/api/*` →
-  the dashboard API, `/gateway/*` → roxy-gateway (both on the EC2 instance). Routing everything
-  through the same domain avoids CORS and avoids the browser blocking mixed HTTP/HTTPS content,
-  since the EC2 instance itself has no TLS certificate. Each behavior has its own CloudFront
-  Function that strips its path prefix before forwarding to the origin (`strip_api_prefix.js`,
-  `strip_gateway_prefix.js`) — so `/gateway/v1/evaluate` reaches roxy-gateway as `/v1/evaluate`.
-  demo-api isn't routed through CloudFront (see below).
+  the dashboard API, `/gateway/*` → roxy-gateway, `/mcp*` → mcp-server (all three on the EC2
+  instance). Routing everything through the same domain avoids CORS and avoids the browser blocking
+  mixed HTTP/HTTPS content, since the EC2 instance itself has no TLS certificate. The `/api/*` and
+  `/gateway/*` behaviors each have a CloudFront Function that strips their path prefix before
+  forwarding to the origin (`strip_api_prefix.js`, `strip_gateway_prefix.js`) — so
+  `/gateway/v1/evaluate` reaches roxy-gateway as `/v1/evaluate`. `/mcp*` has no such function:
+  mongodb-mcp-server's HTTP endpoint is a single fixed path, `/mcp` (not a prefix scheme), so the
+  CDN path already matches the origin path 1:1 with no rewrite needed. demo-api isn't routed
+  through CloudFront (see below).
 - **CloudFront Origin Access Control (OAC)** — used only on the S3 origin. The bucket policy grants
   `s3:GetObject` on `app/*` to `cloudfront.amazonaws.com`, scoped by an `AWS:SourceArn` condition to
   this specific distribution, so nothing else (not even other CloudFront distributions) can read
   the bucket.
-- **ECS cluster running on a single EC2 instance** (`t3a.micro`) — **three** ECS services share this
+- **ECS cluster running on a single EC2 instance** (`t3a.small`) — **four** ECS services share this
   one instance/cluster, each an EC2-launch-type task with host networking (a hand-installed process
   each, essentially, but ECS-managed):
   - **dashboard API** — port 8000, its own ECR repo, connects to the `roxy` database.
@@ -30,19 +33,26 @@ Tier for a low-traffic project.
     policy/verification service it calls per request (block 10, "verifier" — not deployed by this
     Terraform; point it at wherever that service actually runs). It also POSTs a notification to
     `dashboard_url` (dashboard API's `POST /log`) on every decision — defaults to
-    `http://localhost:8000/log`, since all three containers share this one instance (host
+    `http://localhost:8000/log`, since all four containers share this one instance (host
     networking), so it never needs to leave the box.
+  - **mcp-server** — port 8003, running the official `mongodb/mongodb-mcp-server` image straight
+    from Docker Hub (no ECR repo, no build step — it's not built from source in this repo, unlike
+    the other three). Talks directly to `mongo_uri` — no OAuth, no Atlas Service Account,
+    sidestepping the hosted Atlas Managed MCP Server entirely. Reachable two ways: internally at
+    `mcp_server_url` (`http://localhost:8003/mcp`, what roxy-gateway or anything else on this
+    instance should use — no CloudFront round-trip needed), and publicly at `mcp_server_public_url`
+    (`/mcp`, through the CDN, for callers outside the instance).
 
-  All three ports only accept traffic from CloudFront's IP ranges (the security group, one rule
-  covering 8000-8002). The dashboard API and roxy-gateway are both wired into the CloudFront
-  distribution (`/api/*` and `/gateway/*`); demo-api's port is open the same way but has no
-  CloudFront origin routing to it yet — add one (mirroring the `ec2-roxy-gateway` origin/behavior)
-  if you want it served through the CDN too.
+  All four ports only accept traffic from CloudFront's IP ranges (the security group, one rule
+  covering 8000-8003). The dashboard API, roxy-gateway, and mcp-server are all wired into the
+  CloudFront distribution (`/api/*`, `/gateway/*`, `/mcp*`); demo-api's port is open the same way
+  but has no CloudFront origin routing to it yet — add one (mirroring any of the other three
+  origins/behaviors) if you want it served through the CDN too.
 
-  **Memory is genuinely tight now.** Three tasks share one `t3a.micro` (1GiB RAM total): hard
-  memory limits are 700MB + 300MB + 250MB = 1250MB, already over the instance's physical RAM before
-  any OS/Docker/ECS-agent overhead. If concurrent load ever pushes real usage anywhere close to
-  those limits, expect OOM kills. Size up `instance_type` before that happens rather than after.
+  Four tasks share one `t3a.small` (2GiB RAM total): hard memory limits total 700MB + 300MB + 250MB
+  + 200MB = 1450MB, comfortably under the ~1.75-1.85GB actually usable after OS/Docker/ECS-agent
+  overhead, with some headroom for traffic spikes. (This was a `t3a.micro`, 1GiB, until the fourth
+  service — mcp-server — pushed the combined hard limits past what 1GiB could hold at all.)
 
 ## Prerequisites
 
@@ -129,7 +139,7 @@ terraform apply -var="mongo_uri=mongodb://user:password@host:27017"
 This provisions the bucket, CloudFront distribution, all three ECR repos, and the ECS
 cluster/instance. All three ECS services will fail to start tasks until images actually exist in
 their ECR repos — push them next (same ECR login covers all repos, same registry). **Build with
-`--platform linux/amd64` explicitly** — the EC2 instance (`t3a.micro`) is x86_64, and building
+`--platform linux/amd64` explicitly** — the EC2 instance (`t3a.small`) is x86_64, and building
 without a platform flag on an Apple Silicon Mac produces an arm64-only image that ECS can't pull
 (`CannotPullContainerError: no matching manifest for linux/amd64`):
 
@@ -171,19 +181,32 @@ Terraform apply needed for a plain code change. Bump `api_image_tag`, `demo_api_
 `roxy_gateway_image_tag` (e.g. to a git SHA) and `terraform apply` only if you want the exact
 deployed tag tracked in Terraform state.
 
+## Changing `instance_type`
+
+ECS refuses to re-register a container instance under a different instance type than it
+originally registered with (`ClientException: Container instance type changes are not
+supported`) — an in-place resize (what Terraform does by default for `instance_type`, via
+stop/modify/start) leaves the ECS agent permanently crash-looping, and every service's
+`runningCount` silently drops to 0. If you change `instance_type`, force a clean
+destroy+recreate of the instance instead: set `REPLACE_INSTANCE=true` (env var — see
+`.env.example`) when running `deploy.sh`/`deploy-from-env.sh`, or run
+`terraform apply -replace=aws_instance.api` yourself. The Elastic IP re-associates to the new
+instance automatically; expect a few minutes of downtime across all four services while it
+boots and the tasks get placed.
+
 ## Notes and caveats
 
 - **Image architecture**: both `deploy.sh` and the manual instructions above build with
   `docker buildx build --platform linux/amd64`. Don't drop that flag — a plain `docker build` on
-  an Apple Silicon Mac (or any arm64 machine) produces an arm64-only image, and the `t3a.micro`
+  an Apple Silicon Mac (or any arm64 machine) produces an arm64-only image, and the `t3a.small`
   instance is x86_64, so ECS fails every task with `CannotPullContainerError: no matching manifest
   for linux/amd64` — a silent crash loop, not an application bug.
-- **Cost**: ~$10.50/month minimum, running 24/7, with no free-tier path — the two components that
+- **Cost**: ~$17.37/month minimum, running 24/7, with no free-tier path — the two components that
   can't be free:
-  - **EC2 t3a.micro**: ~$6.86/mo. Not free-tier eligible (the free tier only covers t2.micro/t3.micro,
+  - **EC2 t3a.small**: ~$13.72/mo. Not free-tier eligible (the free tier only covers t2.micro/t3.micro,
     or t3.small/t4g.micro/etc. for accounts created after July 2025) — t3a is a different instance
-    family and isn't on either list. Switch `instance_type` to `t3.micro` if free-tier eligibility
-    matters more than the (small) t3a price advantage.
+    family and isn't on either list, and t3a.small isn't `.micro`-sized regardless. Needed for the
+    combined memory of four ECS services (see above) — t3a.micro (1GiB) isn't enough anymore.
   - **Elastic IP**: ~$3.65/mo. AWS made all public IPv4 addresses billable in Feb 2024, attached or
     not — there's no free allowance for this regardless of account age.
 

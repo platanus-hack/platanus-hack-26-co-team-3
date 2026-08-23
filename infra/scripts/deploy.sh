@@ -130,8 +130,21 @@ info "terraform validate..."
 terraform validate
 
 if [[ "$DO_INFRA" == "true" ]]; then
+  # REPLACE_INSTANCE=true forces a clean destroy+recreate of the EC2 instance instead of an
+  # in-place update. Needed after changing instance_type: ECS refuses to re-register a
+  # container instance under a different instance type than it originally registered with
+  # ("Container instance type changes are not supported"), so an in-place resize leaves the
+  # ECS agent permanently crash-looping. Not the default — only opt in when actually
+  # changing instance_type, since this causes a few minutes of downtime on all services.
+  REPLACE_ARGS=()
+  if [[ "${REPLACE_INSTANCE:-false}" == "true" ]]; then
+    info "REPLACE_INSTANCE=true — forcing replacement of the EC2 instance..."
+    REPLACE_ARGS+=(-replace=aws_instance.api)
+  fi
+
   info "terraform apply..."
   terraform apply -auto-approve \
+    ${REPLACE_ARGS[@]+"${REPLACE_ARGS[@]}"} \
     -var-file="$TFVARS_FILE" \
     -var="mongo_uri=$MONGO_URI"
 else
@@ -157,7 +170,7 @@ if [[ "$DO_API" == "true" || "$DO_DEMO_API" == "true" || "$DO_ROXY_GATEWAY" == "
 fi
 
 if [[ "$DO_API" == "true" ]]; then
-  # --platform linux/amd64: the EC2 instance (t3a.micro) is x86_64. Building without an
+  # --platform linux/amd64: the EC2 instance (t3a.small) is x86_64. Building without an
   # explicit platform on an Apple Silicon Mac produces an arm64-only image that ECS can't
   # pull (CannotPullContainerError: no matching manifest for linux/amd64).
   info "Building and pushing API image (linux/amd64)..."
